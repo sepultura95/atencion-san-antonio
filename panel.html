@@ -67,8 +67,10 @@
     background:var(--ochre-500);
     display:flex;align-items:center;justify-content:center;
     font-family:'Fraunces',serif;font-weight:700;color:var(--green-900);
-    font-size:15px;
+    font-size:15px;overflow:hidden;flex:none;
   }
+  .seal img{width:100%;height:100%;object-fit:cover;}
+  .topbar{background-size:cover;background-position:center;}
   .topbar h1{color:var(--white);font-size:17px;}
   .topbar .sub{font-size:12px;color:var(--ochre-100);margin-top:2px;}
   .btn-ghost{
@@ -233,9 +235,9 @@
 </head>
 <body>
 
-<div class="topbar">
+<div class="topbar" id="topbar">
   <div class="left">
-    <div class="seal">PS</div>
+    <div class="seal" id="seal">PS</div>
     <div>
       <h1>Panel de funcionarios</h1>
       <div class="sub" id="topbar-sub">Programas Sociales — Alcaldía de San Antonio</div>
@@ -247,9 +249,44 @@
       <button type="button" onclick="cambiarTextoTamano(0)" aria-label="Tamaño de texto normal">A</button>
       <button type="button" onclick="cambiarTextoTamano(1)" aria-label="Aumentar tamaño de texto">A+</button>
     </div>
+    <button class="btn-ghost" id="btn-apariencia" style="display:none;">🎨 Apariencia</button>
     <button class="btn-ghost" id="btn-avisos" style="display:none;">📅 Días sin atención</button>
     <button class="btn-presencial" id="btn-presencial" style="display:none;">➕ Atención presencial</button>
     <button class="btn-ghost" id="btn-logout" style="display:none;">Cerrar sesión</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-apariencia-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-apariencia-title">
+  <div class="modal-card">
+    <h2 id="modal-apariencia-title">Apariencia del encabezado</h2>
+    <p class="modal-sub">Reemplaza el escudo y el fondo del encabezado en el portal y en este panel. Formatos permitidos: PNG, JPG, WEBP o SVG, hasta 2 MB.</p>
+
+    <div class="field">
+      <label>Escudo / logo (reemplaza el círculo "SA")</label>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:6px;">
+        <div id="ap-logo-preview" style="width:48px;height:48px;border-radius:50%;background:var(--ochre-500);overflow:hidden;flex:none;display:flex;align-items:center;justify-content:center;color:var(--green-900);font-weight:700;">SA</div>
+        <input type="file" id="ap-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+      </div>
+      <div style="margin-top:8px;display:flex;gap:10px;">
+        <button class="btn-small" id="btn-ap-logo-subir" style="background:var(--green-700);color:#fff;">Subir logo</button>
+        <button class="btn-small" id="btn-ap-logo-quitar" style="background:var(--paper-dim);">Quitar logo (usar por defecto)</button>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:18px;">
+      <label>Imagen de fondo del encabezado (opcional)</label>
+      <div id="ap-fondo-preview" style="width:100%;height:60px;border-radius:6px;background:var(--green-700);margin-top:6px;background-size:cover;background-position:center;"></div>
+      <input type="file" id="ap-fondo-file" accept="image/png,image/jpeg,image/webp" style="margin-top:8px;">
+      <div style="margin-top:8px;display:flex;gap:10px;">
+        <button class="btn-small" id="btn-ap-fondo-subir" style="background:var(--green-700);color:#fff;">Subir fondo</button>
+        <button class="btn-small" id="btn-ap-fondo-quitar" style="background:var(--paper-dim);">Quitar fondo (usar color por defecto)</button>
+      </div>
+    </div>
+
+    <div class="modal-msg" id="ap-msg" role="status" aria-live="polite"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btn-apariencia-cerrar">Cerrar</button>
+    </div>
   </div>
 </div>
 
@@ -380,6 +417,25 @@ const SUPABASE_KEY = 'sb_publishable_elPZQ7xh3ManlHtDWJY1DA_1TgwZvgk';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ============================================================
+   Apariencia del encabezado (logo y fondo), configurable aquí mismo
+============================================================ */
+async function inicializarApariencia(){
+  try{
+    const { data } = await sb.from('configuracion_sitio').select('*').eq('id', 1).single();
+    if(!data) return;
+    if(data.logo_url){
+      const seal = document.getElementById('seal');
+      seal.innerHTML = `<img src="${data.logo_url}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima">`;
+    }
+    if(data.header_fondo_url){
+      const topbar = document.getElementById('topbar');
+      topbar.style.backgroundImage = `linear-gradient(rgba(31,75,63,0.78), rgba(31,75,63,0.78)), url('${data.header_fondo_url}')`;
+    }
+  }catch(e){ /* sin configuración todavía: queda el diseño por defecto */ }
+}
+inicializarApariencia();
+
+/* ============================================================
    Accesibilidad — control de tamaño de texto (Res. 1519/2020, WCAG 2.1 AA)
 ============================================================ */
 (function(){
@@ -463,7 +519,10 @@ async function afterLogin(){
   document.getElementById('login-wrap').style.display = 'none';
   document.getElementById('btn-logout').style.display = 'inline-block';
   document.getElementById('btn-presencial').style.display = 'inline-block';
-  if(esCoordinador){ document.getElementById('btn-avisos').style.display = 'inline-block'; }
+  if(esCoordinador){
+    document.getElementById('btn-avisos').style.display = 'inline-block';
+    document.getElementById('btn-apariencia').style.display = 'inline-block';
+  }
   document.getElementById('staff-shell').classList.add('active');
   document.getElementById('topbar-sub').textContent =
     (perfil.nombre || 'Funcionario') + ' · ' + (esCoordinador ? 'Coordinación (todos los programas)' : misProgramas.join(', '));
@@ -704,6 +763,65 @@ async function guardarRespuesta(s){
 
 function escapeHtml(str){
   return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ============================================================
+   Apariencia del encabezado — solo coordinador
+============================================================ */
+const MAX_IMG_BYTES = 2 * 1024 * 1024;
+
+document.getElementById('btn-apariencia').addEventListener('click', abrirModalApariencia);
+document.getElementById('btn-apariencia-cerrar').addEventListener('click', cerrarModalApariencia);
+document.getElementById('modal-apariencia-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'modal-apariencia-overlay') cerrarModalApariencia();
+});
+document.getElementById('btn-ap-logo-subir').addEventListener('click', ()=>subirImagenApariencia('logo_url', document.getElementById('ap-logo-file')));
+document.getElementById('btn-ap-fondo-subir').addEventListener('click', ()=>subirImagenApariencia('header_fondo_url', document.getElementById('ap-fondo-file')));
+document.getElementById('btn-ap-logo-quitar').addEventListener('click', ()=>quitarImagenApariencia('logo_url'));
+document.getElementById('btn-ap-fondo-quitar').addEventListener('click', ()=>quitarImagenApariencia('header_fondo_url'));
+
+async function abrirModalApariencia(){
+  document.getElementById('ap-msg').textContent = '';
+  document.getElementById('ap-logo-file').value = '';
+  document.getElementById('ap-fondo-file').value = '';
+  const { data } = await sb.from('configuracion_sitio').select('*').eq('id', 1).single();
+  const logoPrev = document.getElementById('ap-logo-preview');
+  const fondoPrev = document.getElementById('ap-fondo-preview');
+  logoPrev.innerHTML = (data && data.logo_url) ? `<img src="${data.logo_url}" style="width:100%;height:100%;object-fit:cover;">` : 'SA';
+  fondoPrev.style.backgroundImage = (data && data.header_fondo_url) ? `url('${data.header_fondo_url}')` : 'none';
+  document.getElementById('modal-apariencia-overlay').classList.add('open');
+}
+
+function cerrarModalApariencia(){
+  document.getElementById('modal-apariencia-overlay').classList.remove('open');
+}
+
+async function subirImagenApariencia(campo, inputFile){
+  const msg = document.getElementById('ap-msg');
+  const file = inputFile.files[0];
+  if(!file){ msg.textContent = 'Elige una imagen primero.'; return; }
+  if(file.size > MAX_IMG_BYTES){ msg.textContent = 'La imagen pesa más de 2 MB.'; return; }
+  msg.textContent = 'Subiendo…';
+  const ext = file.name.split('.').pop();
+  const ruta = campo + '-' + Date.now() + '.' + ext;
+  const { error: upErr } = await sb.storage.from('branding').upload(ruta, file, { upsert: true });
+  if(upErr){ msg.textContent = 'Error al subir: ' + upErr.message; return; }
+  const { data: pub } = sb.storage.from('branding').getPublicUrl(ruta);
+  const { error: dbErr } = await sb.from('configuracion_sitio').update({ [campo]: pub.publicUrl, updated_at: new Date().toISOString() }).eq('id', 1);
+  if(dbErr){ msg.textContent = 'Error al guardar: ' + dbErr.message; return; }
+  msg.textContent = 'Listo, imagen actualizada.';
+  await abrirModalApariencia();
+  await inicializarApariencia();
+}
+
+async function quitarImagenApariencia(campo){
+  const { error } = await sb.from('configuracion_sitio').update({ [campo]: null, updated_at: new Date().toISOString() }).eq('id', 1);
+  const msg = document.getElementById('ap-msg');
+  if(error){ msg.textContent = 'Error: ' + error.message; return; }
+  msg.textContent = 'Se restableció el valor por defecto.';
+  if(campo === 'logo_url'){ document.getElementById('seal').innerHTML = 'PS'; }
+  if(campo === 'header_fondo_url'){ document.getElementById('topbar').style.backgroundImage = ''; }
+  await abrirModalApariencia();
 }
 
 /* ============================================================

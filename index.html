@@ -87,8 +87,10 @@
     background:var(--ochre-500);
     display:flex;align-items:center;justify-content:center;
     font-family:'Fraunces',serif;font-weight:700;color:var(--green-900);
-    flex:none;font-size:15px;
+    flex:none;font-size:15px;overflow:hidden;
   }
+  .seal img{width:100%;height:100%;object-fit:cover;}
+  .topbar{background-size:cover;background-position:center;}
   .topbar .titles{flex:1;min-width:0;}
   .topbar .titles .muni{font-size:11px;letter-spacing:0.04em;color:var(--ochre-100);opacity:0.9;}
   .topbar .titles .site{font-family:'Fraunces',serif;font-size:17px;font-weight:600;line-height:1.1;}
@@ -399,8 +401,8 @@
 
 <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
 
-<div class="topbar" role="banner">
-  <div class="seal" aria-hidden="true">SA</div>
+<div class="topbar" id="topbar" role="banner">
+  <div class="seal" id="seal" aria-hidden="true">SA</div>
   <div class="titles">
     <div class="muni">Alcaldía Municipal de San Antonio, Tolima</div>
     <div class="site">Atención al usuario · Programas Sociales</div>
@@ -605,6 +607,26 @@ function mostrarHorarioCompleto(){
 }
 
 inicializarHorario();
+
+/* ============================================================
+   Apariencia del encabezado (logo y fondo), configurable desde el panel
+============================================================ */
+async function inicializarApariencia(){
+  try{
+    const { data } = await sb.from('configuracion_sitio').select('*').eq('id', 1).single();
+    if(!data) return;
+    if(data.logo_url){
+      const seal = document.getElementById('seal');
+      seal.innerHTML = `<img src="${data.logo_url}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima">`;
+      seal.removeAttribute('aria-hidden');
+    }
+    if(data.header_fondo_url){
+      const topbar = document.getElementById('topbar');
+      topbar.style.backgroundImage = `linear-gradient(rgba(31,75,63,0.78), rgba(31,75,63,0.78)), url('${data.header_fondo_url}')`;
+    }
+  }catch(e){ /* si no hay configuración todavía, se queda con el diseño por defecto */ }
+}
+inicializarApariencia();
 
 async function createSolicitud(data){
   // El id se genera en el navegador (ver draft.id) así no necesitamos que el
