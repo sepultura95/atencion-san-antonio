@@ -210,7 +210,11 @@
   .chat-head button{background:none;border:none;color:var(--white);font-size:18px;cursor:pointer;opacity:0.85;}
 
   .chat-body{flex:1;overflow-y:auto;padding:14px;background:var(--paper);display:flex;flex-direction:column;gap:10px;}
-  .msg{max-width:84%;padding:9px 12px;border-radius:var(--radius-bubble);font-size:13.5px;line-height:1.45;white-space:pre-line;}
+  .msg{max-width:84%;padding:9px 12px;border-radius:var(--radius-bubble);font-size:13.5px;line-height:1.45;white-space:pre-line;overflow-wrap:anywhere;word-break:break-word;}
+  .radicado-box{
+    display:inline-block;background:var(--ochre-100);color:var(--green-900);font-weight:700;
+    padding:4px 10px;border-radius:6px;font-size:14.5px;letter-spacing:0.03em;margin:4px 0;
+  }
   .msg.bot{background:var(--white);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px;}
   .msg.user{background:var(--green-700);color:var(--white);align-self:flex-end;border-bottom-right-radius:4px;}
   .msg.system{align-self:center;background:var(--ochre-100);color:var(--green-900);font-size:12px;border-radius:999px;padding:5px 12px;}
@@ -643,6 +647,34 @@ async function inicializarApariencia(){
 }
 inicializarApariencia();
 
+/* ============================================================
+   Radicado legible: AA-PROGRAMA-0001 (año-programa-consecutivo),
+   asignado automáticamente por la base de datos al insertar.
+============================================================ */
+function formatoRadicado(id){
+  // Respaldo por si aún no se corrió la migración del radicado legible.
+  return 'SA-' + id.replace(/-/g,'').substring(0,8).toUpperCase();
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function resolverRadicado(textoIngresado){
+  const texto = textoIngresado.trim();
+  if(UUID_RE.test(texto)) return texto; // pegó el id completo (compatibilidad)
+  if(texto.length < 4) return null;
+  const { data, error } = await sb.rpc('buscar_radicado_por_codigo', { codigo: texto });
+  if(error){ console.error(error); return null; }
+  return data || null;
+}
+
+async function obtenerRadicadoLegible(id){
+  try{
+    const { data, error } = await sb.rpc('obtener_radicado_legible', { solicitud_id: id });
+    if(error){ console.error(error); return null; }
+    return data || null;
+  }catch(e){ return null; }
+}
+
 async function createSolicitud(data){
   // El id se genera en el navegador (ver draft.id) así no necesitamos que el
   // servidor nos "devuelva" la fila (eso exigiría permiso de lectura, que un
@@ -822,12 +854,23 @@ function closeChat(){
   document.getElementById('chat-launcher').focus();
 }
 
-function addMsg(text, who, archivo){
+function addMsg(text, who, archivo, radicadoDestacado){
   const body = document.getElementById('chat-body');
   const div = document.createElement('div');
   div.className = 'msg ' + who;
+  if(radicadoDestacado){
+    const label = document.createElement('div');
+    label.textContent = 'Tu número de radicado:';
+    label.style.fontSize = '12px';
+    div.appendChild(label);
+    const badge = document.createElement('div');
+    badge.className = 'radicado-box';
+    badge.textContent = radicadoDestacado;
+    div.appendChild(badge);
+  }
   const textWrap = document.createElement('div');
   textWrap.textContent = text;
+  if(radicadoDestacado) textWrap.style.marginTop = '4px';
   div.appendChild(textWrap);
   if(archivo && archivo.url){
     const a = document.createElement('a');
@@ -1056,6 +1099,8 @@ function renderCaracterizacionChips(){
   cont.textContent = draft.caracterizacion.length ? 'Continuar →' : 'Ninguno / Continuar →';
   cont.onclick = () => {
     cont.disabled = true;
+    if(!draft.caracterizacion.length){ draft.caracterizacion = ['Ninguno']; }
+    addMsg('Caracterización: ' + draft.caracterizacion.join(', '), 'user');
     setChips([]); // limpia estos botones antes de avanzar, para que no se queden pegados
     goRadicarDescripcion();
   };
@@ -1123,7 +1168,8 @@ async function enviarSolicitud(){
   });
   lastRadicado = id;
   chatState = 'POST_ENVIO';
-  addMsg(`Tu solicitud quedó registrada con el radicado ${id}. Un funcionario del programa de ${draft.oficina} la revisará y te responderá por este medio o por ${draft.contacto}.`, 'bot');
+  const radicadoLegible = (await obtenerRadicadoLegible(id)) || formatoRadicado(id);
+  addMsg(`Guárdalo para consultar el estado más adelante. Un funcionario del programa de ${draft.oficina} la revisará y te responderá por este medio o por ${draft.contacto}.`, 'bot', null, radicadoLegible);
   const estadoHorarioActual = obtenerEstadoHorario();
   if(!estadoHorarioActual.abierto || avisoNoLaboralHoy){
     addMsg(mensajeFueraHorario(), 'bot');
@@ -1151,26 +1197,28 @@ async function priorizarUltima(){
 function goConsultar(){
   chatState = 'CONSULTAR_RADICADO';
   setChips([]);
-  addMsg('Indícame el número de radicado que te dieron al registrar tu solicitud.', 'bot');
-  showTextInput('Número de radicado');
+  addMsg('Indícame el número de radicado que te dieron al registrar tu solicitud (por ejemplo 26-AM-0001).', 'bot');
+  showTextInput('Ej: 26-AM-0001');
 }
 
-async function mostrarEstado(id){
-  const radicado = id.trim();
-  const s = await getSolicitud(radicado);
+async function mostrarEstado(textoIngresado){
+  addMsg('Buscando tu solicitud…', 'system');
+  const radicado = await resolverRadicado(textoIngresado);
+  const s = radicado ? await getSolicitud(radicado) : null;
   if(!s){
-    addMsg('No encontré ninguna solicitud con ese número de radicado. Verifica que esté completo.', 'bot');
+    addMsg('No encontré ninguna solicitud con ese número de radicado. Verifica que esté completo, como te lo mostramos al radicar (por ejemplo 26-AM-0001).', 'bot');
     setChips([{label:'Intentar de nuevo', value:'CONSULTAR_RETRY'},{label:'Volver al menú', value:'MENU'}]);
     chatState = 'CONSULTAR_RETRY';
     return;
   }
+  const radicadoLegible = (await obtenerRadicadoLegible(radicado)) || formatoRadicado(radicado);
   lastConsultaId = radicado;
   const estadoLabel = {pendiente:'Pendiente', en_proceso:'En proceso', resuelto:'Resuelto', respondida:'Respondida'};
   let texto = `Tu solicitud (${s.programa} · ${s.tipo}) está "${estadoLabel[s.estado] || s.estado}".`;
   if(s.ultima_respuesta){
     texto += `\n\nÚltima respuesta del funcionario: "${s.ultima_respuesta}"`;
   }
-  addMsg(texto, 'bot');
+  addMsg(texto, 'bot', null, radicadoLegible);
   if(s.estado === 'pendiente' || s.estado === 'en_proceso'){
     const turnoInfo = await obtenerTurno(radicado);
     if(turnoInfo && turnoInfo.turno > 0){
