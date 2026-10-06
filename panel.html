@@ -55,12 +55,12 @@
     background:var(--green-700);
     color:var(--white);
     padding:14px 20px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:14px;
     border-bottom:3px solid var(--ochre-500);
+    position:relative;overflow:hidden;
   }
+  .topbar-bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;transform-origin:center;}
+  .topbar-bg-overlay{position:absolute;inset:0;z-index:0;pointer-events:none;}
+  .topbar-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:14px;}
   .topbar .left{display:flex;align-items:center;gap:12px;}
   .seal{
     width:36px;height:36px;border-radius:50%;
@@ -69,8 +69,7 @@
     font-family:'Fraunces',serif;font-weight:700;color:var(--green-900);
     font-size:15px;overflow:hidden;flex:none;
   }
-  .seal img{width:100%;height:100%;object-fit:cover;}
-  .topbar{background-size:cover;background-position:center;}
+  .seal img{width:100%;height:100%;object-fit:cover;transform-origin:center;}
   .topbar h1{color:var(--white);font-size:17px;}
   .topbar .sub{font-size:12px;color:var(--ochre-100);margin-top:2px;}
   .btn-ghost{
@@ -236,23 +235,27 @@
 <body>
 
 <div class="topbar" id="topbar">
-  <div class="left">
-    <div class="seal" id="seal">PS</div>
-    <div>
-      <h1>Panel de funcionarios</h1>
-      <div class="sub" id="topbar-sub">Programas Sociales — Alcaldía de San Antonio</div>
+  <img id="topbar-bg-img" class="topbar-bg-img" style="display:none;" alt="">
+  <div id="topbar-bg-overlay" class="topbar-bg-overlay" style="display:none;"></div>
+  <div class="topbar-inner">
+    <div class="left">
+      <div class="seal" id="seal">PS</div>
+      <div>
+        <h1>Panel de funcionarios</h1>
+        <div class="sub" id="topbar-sub">Programas Sociales — Alcaldía de San Antonio</div>
+      </div>
     </div>
-  </div>
-  <div style="display:flex;gap:10px;align-items:center;">
-    <div class="text-ctrl" role="group" aria-label="Tamaño del texto">
-      <button type="button" onclick="cambiarTextoTamano(-1)" aria-label="Disminuir tamaño de texto">A-</button>
-      <button type="button" onclick="cambiarTextoTamano(0)" aria-label="Tamaño de texto normal">A</button>
-      <button type="button" onclick="cambiarTextoTamano(1)" aria-label="Aumentar tamaño de texto">A+</button>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <div class="text-ctrl" role="group" aria-label="Tamaño del texto">
+        <button type="button" onclick="cambiarTextoTamano(-1)" aria-label="Disminuir tamaño de texto">A-</button>
+        <button type="button" onclick="cambiarTextoTamano(0)" aria-label="Tamaño de texto normal">A</button>
+        <button type="button" onclick="cambiarTextoTamano(1)" aria-label="Aumentar tamaño de texto">A+</button>
+      </div>
+      <button class="btn-ghost" id="btn-apariencia" style="display:none;">🎨 Apariencia</button>
+      <button class="btn-ghost" id="btn-avisos" style="display:none;">📅 Días sin atención</button>
+      <button class="btn-presencial" id="btn-presencial" style="display:none;">➕ Atención presencial</button>
+      <button class="btn-ghost" id="btn-logout" style="display:none;">Cerrar sesión</button>
     </div>
-    <button class="btn-ghost" id="btn-apariencia" style="display:none;">🎨 Apariencia</button>
-    <button class="btn-ghost" id="btn-avisos" style="display:none;">📅 Días sin atención</button>
-    <button class="btn-presencial" id="btn-presencial" style="display:none;">➕ Atención presencial</button>
-    <button class="btn-ghost" id="btn-logout" style="display:none;">Cerrar sesión</button>
   </div>
 </div>
 
@@ -275,6 +278,8 @@
         <input type="range" id="ap-logo-posx" min="0" max="100" value="50" style="width:100%;">
         <label style="font-size:11.5px;color:var(--ink-soft);">Mover la imagen — vertical</label>
         <input type="range" id="ap-logo-posy" min="0" max="100" value="50" style="width:100%;">
+        <label style="font-size:11.5px;color:var(--ink-soft);">Tamaño (acercar / alejar)</label>
+        <input type="range" id="ap-logo-zoom" min="100" max="250" value="100" style="width:100%;">
       </div>
       <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn-small" id="btn-ap-logo-subir" style="background:var(--green-700);color:#fff;">Subir logo</button>
@@ -285,13 +290,19 @@
 
     <div class="field" style="margin-top:18px;">
       <label>Imagen de fondo del encabezado (opcional)</label>
-      <div id="ap-fondo-preview" style="width:100%;height:70px;border-radius:6px;background:var(--green-700);margin-top:6px;background-size:cover;display:flex;align-items:center;padding:0 14px;color:#fff;font-size:12px;font-weight:600;">Así se verá el encabezado</div>
+      <div style="position:relative;width:100%;height:70px;border-radius:6px;overflow:hidden;background:var(--green-700);margin-top:6px;">
+        <img id="ap-fondo-preview-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;transform-origin:center;" alt="">
+        <div id="ap-fondo-preview-overlay" style="position:absolute;inset:0;"></div>
+        <div style="position:relative;z-index:1;display:flex;align-items:center;height:100%;padding:0 14px;color:#fff;font-size:12px;font-weight:600;">Así se verá el encabezado</div>
+      </div>
       <input type="file" id="ap-fondo-file" accept="image/png,image/jpeg,image/webp" style="margin-top:8px;">
       <div id="ap-fondo-pos-ctrl" style="display:none;margin-top:10px;">
         <label style="font-size:11.5px;color:var(--ink-soft);">Mover la imagen — horizontal</label>
         <input type="range" id="ap-fondo-posx" min="0" max="100" value="50" style="width:100%;">
         <label style="font-size:11.5px;color:var(--ink-soft);">Mover la imagen — vertical</label>
         <input type="range" id="ap-fondo-posy" min="0" max="100" value="50" style="width:100%;">
+        <label style="font-size:11.5px;color:var(--ink-soft);">Tamaño (acercar / alejar)</label>
+        <input type="range" id="ap-fondo-zoom" min="100" max="250" value="100" style="width:100%;">
         <label style="font-size:11.5px;color:var(--ink-soft);">Oscurecer para que el texto se lea bien</label>
         <input type="range" id="ap-fondo-overlay" min="0" max="90" value="55" style="width:100%;">
       </div>
@@ -445,14 +456,21 @@ async function inicializarApariencia(){
     if(data.logo_url){
       const seal = document.getElementById('seal');
       const px = data.logo_pos_x ?? 50, py = data.logo_pos_y ?? 50;
-      seal.innerHTML = `<img src="${data.logo_url}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima" style="object-position:${px}% ${py}%;">`;
+      const lz = (data.logo_zoom ?? 100) / 100;
+      seal.innerHTML = `<img src="${data.logo_url}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima" style="object-position:${px}% ${py}%;transform:scale(${lz});">`;
     }
     if(data.header_fondo_url){
-      const topbar = document.getElementById('topbar');
+      const bgImg = document.getElementById('topbar-bg-img');
+      const overlay = document.getElementById('topbar-bg-overlay');
       const fx = data.header_fondo_pos_x ?? 50, fy = data.header_fondo_pos_y ?? 50;
+      const fz = (data.header_fondo_zoom ?? 100) / 100;
       const ov = (data.header_fondo_overlay ?? 55) / 100;
-      topbar.style.backgroundImage = `linear-gradient(rgba(31,75,63,${ov}), rgba(31,75,63,${ov})), url('${data.header_fondo_url}')`;
-      topbar.style.backgroundPosition = `${fx}% ${fy}%`;
+      bgImg.src = data.header_fondo_url;
+      bgImg.style.display = 'block';
+      bgImg.style.objectPosition = `${fx}% ${fy}%`;
+      bgImg.style.transform = `scale(${fz})`;
+      overlay.style.background = `rgba(31,75,63,${ov})`;
+      overlay.style.display = 'block';
     }
   }catch(e){ /* sin configuración todavía: queda el diseño por defecto */ }
 }
@@ -806,10 +824,10 @@ document.getElementById('btn-ap-fondo-quitar').addEventListener('click', ()=>qui
 document.getElementById('btn-ap-logo-guardar-pos').addEventListener('click', guardarPosicionLogo);
 document.getElementById('btn-ap-fondo-guardar-pos').addEventListener('click', guardarPosicionFondo);
 
-['ap-logo-posx','ap-logo-posy'].forEach(id=>{
+['ap-logo-posx','ap-logo-posy','ap-logo-zoom'].forEach(id=>{
   document.getElementById(id).addEventListener('input', actualizarPreviewLogo);
 });
-['ap-fondo-posx','ap-fondo-posy','ap-fondo-overlay'].forEach(id=>{
+['ap-fondo-posx','ap-fondo-posy','ap-fondo-zoom','ap-fondo-overlay'].forEach(id=>{
   document.getElementById(id).addEventListener('input', actualizarPreviewFondo);
 });
 
@@ -817,17 +835,24 @@ function actualizarPreviewLogo(){
   const img = document.getElementById('ap-logo-preview-img');
   const x = document.getElementById('ap-logo-posx').value;
   const y = document.getElementById('ap-logo-posy').value;
+  const z = document.getElementById('ap-logo-zoom').value;
   img.style.objectPosition = x + '% ' + y + '%';
+  img.style.transform = `scale(${z/100})`;
 }
 
 function actualizarPreviewFondo(){
-  const prev = document.getElementById('ap-fondo-preview');
+  const img = document.getElementById('ap-fondo-preview-img');
+  const overlay = document.getElementById('ap-fondo-preview-overlay');
   const x = document.getElementById('ap-fondo-posx').value;
   const y = document.getElementById('ap-fondo-posy').value;
+  const z = document.getElementById('ap-fondo-zoom').value;
   const ov = document.getElementById('ap-fondo-overlay').value;
-  prev.style.backgroundPosition = x + '% ' + y + '%';
+  img.style.objectPosition = x + '% ' + y + '%';
+  img.style.transform = `scale(${z/100})`;
+  overlay.style.background = `rgba(31,75,63,${ov/100})`;
   if(apConfigActual && apConfigActual.header_fondo_url){
-    prev.style.backgroundImage = `linear-gradient(rgba(31,75,63,${ov/100}), rgba(31,75,63,${ov/100})), url('${apConfigActual.header_fondo_url}')`;
+    img.src = apConfigActual.header_fondo_url;
+    img.style.display = 'block';
   }
 }
 
@@ -848,6 +873,7 @@ async function abrirModalApariencia(){
     logoTxt.style.display = 'none';
     document.getElementById('ap-logo-posx').value = apConfigActual.logo_pos_x ?? 50;
     document.getElementById('ap-logo-posy').value = apConfigActual.logo_pos_y ?? 50;
+    document.getElementById('ap-logo-zoom').value = apConfigActual.logo_zoom ?? 100;
     actualizarPreviewLogo();
     logoPosCtrl.style.display = 'block';
     logoGuardarBtn.style.display = 'inline-block';
@@ -863,12 +889,14 @@ async function abrirModalApariencia(){
   if(apConfigActual.header_fondo_url){
     document.getElementById('ap-fondo-posx').value = apConfigActual.header_fondo_pos_x ?? 50;
     document.getElementById('ap-fondo-posy').value = apConfigActual.header_fondo_pos_y ?? 50;
+    document.getElementById('ap-fondo-zoom').value = apConfigActual.header_fondo_zoom ?? 100;
     document.getElementById('ap-fondo-overlay').value = apConfigActual.header_fondo_overlay ?? 55;
     actualizarPreviewFondo();
     fondoPosCtrl.style.display = 'block';
     fondoGuardarBtn.style.display = 'inline-block';
   } else {
-    document.getElementById('ap-fondo-preview').style.backgroundImage = 'none';
+    document.getElementById('ap-fondo-preview-img').style.display = 'none';
+    document.getElementById('ap-fondo-preview-overlay').style.background = 'transparent';
     fondoPosCtrl.style.display = 'none';
     fondoGuardarBtn.style.display = 'none';
   }
@@ -893,7 +921,8 @@ async function subirImagenApariencia(campo, inputFile){
   const { data: pub } = sb.storage.from('branding').getPublicUrl(ruta);
   const campoPosX = campo === 'logo_url' ? 'logo_pos_x' : 'header_fondo_pos_x';
   const campoPosY = campo === 'logo_url' ? 'logo_pos_y' : 'header_fondo_pos_y';
-  const actualizacion = { [campo]: pub.publicUrl, [campoPosX]: 50, [campoPosY]: 50, updated_at: new Date().toISOString() };
+  const campoZoom = campo === 'logo_url' ? 'logo_zoom' : 'header_fondo_zoom';
+  const actualizacion = { [campo]: pub.publicUrl, [campoPosX]: 50, [campoPosY]: 50, [campoZoom]: 100, updated_at: new Date().toISOString() };
   if(campo === 'header_fondo_url') actualizacion.header_fondo_overlay = 55;
   const { error: dbErr } = await sb.from('configuracion_sitio').update(actualizacion).eq('id', 1);
   if(dbErr){ msg.textContent = 'Error al guardar: ' + dbErr.message; return; }
@@ -906,7 +935,8 @@ async function guardarPosicionLogo(){
   const msg = document.getElementById('ap-msg');
   const x = parseInt(document.getElementById('ap-logo-posx').value, 10);
   const y = parseInt(document.getElementById('ap-logo-posy').value, 10);
-  const { error } = await sb.from('configuracion_sitio').update({ logo_pos_x: x, logo_pos_y: y, updated_at: new Date().toISOString() }).eq('id', 1);
+  const z = parseInt(document.getElementById('ap-logo-zoom').value, 10);
+  const { error } = await sb.from('configuracion_sitio').update({ logo_pos_x: x, logo_pos_y: y, logo_zoom: z, updated_at: new Date().toISOString() }).eq('id', 1);
   msg.textContent = error ? ('Error: ' + error.message) : 'Posición del logo guardada.';
   await inicializarApariencia();
 }
@@ -915,8 +945,9 @@ async function guardarPosicionFondo(){
   const msg = document.getElementById('ap-msg');
   const x = parseInt(document.getElementById('ap-fondo-posx').value, 10);
   const y = parseInt(document.getElementById('ap-fondo-posy').value, 10);
+  const z = parseInt(document.getElementById('ap-fondo-zoom').value, 10);
   const ov = parseInt(document.getElementById('ap-fondo-overlay').value, 10);
-  const { error } = await sb.from('configuracion_sitio').update({ header_fondo_pos_x: x, header_fondo_pos_y: y, header_fondo_overlay: ov, updated_at: new Date().toISOString() }).eq('id', 1);
+  const { error } = await sb.from('configuracion_sitio').update({ header_fondo_pos_x: x, header_fondo_pos_y: y, header_fondo_zoom: z, header_fondo_overlay: ov, updated_at: new Date().toISOString() }).eq('id', 1);
   msg.textContent = error ? ('Error: ' + error.message) : 'Ajustes del fondo guardados.';
   await inicializarApariencia();
 }
@@ -927,7 +958,10 @@ async function quitarImagenApariencia(campo){
   if(error){ msg.textContent = 'Error: ' + error.message; return; }
   msg.textContent = 'Se restableció el valor por defecto.';
   if(campo === 'logo_url'){ document.getElementById('seal').innerHTML = 'PS'; }
-  if(campo === 'header_fondo_url'){ document.getElementById('topbar').style.backgroundImage = ''; }
+  if(campo === 'header_fondo_url'){
+    document.getElementById('topbar-bg-img').style.display = 'none';
+    document.getElementById('topbar-bg-overlay').style.display = 'none';
+  }
   await abrirModalApariencia();
 }
 
