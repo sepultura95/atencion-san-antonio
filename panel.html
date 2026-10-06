@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Panel de funcionarios — Programas Sociales</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --green-900:#163a2f;
+    --green-700:#1f4b3f;
+    --green-600:#2b5f4f;
+    --ochre-600:#b5812a;
+    --ochre-500:#c98a2b;
+    --ochre-100:#f3e4c6;
+    --paper:#f7f5ee;
+    --paper-dim:#efece2;
+    --ink:#272420;
+    --ink-soft:#4a463e;
+    --line:#ddd6c6;
+    --red-700:#9c3b2b;
+    --white:#ffffff;
+    --radius-card:4px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    letter-spacing:-0.01em;
+    margin:0;
+    color:var(--green-900);
+  }
+  button{font-family:inherit;cursor:pointer;}
+  input,textarea,select{font-family:inherit;}
+  .sr-only{
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0;
+  }
+  a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible{
+    outline:3px solid var(--ochre-500);outline-offset:2px;
+  }
+  .btn-back{display:none;background:var(--paper);border:1px solid var(--line);color:var(--green-700);padding:8px 12px;border-radius:4px;font-size:13px;font-weight:600;margin-bottom:10px;}
+
+  .topbar{
+    background:var(--green-700);
+    color:var(--white);
+    padding:14px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    border-bottom:3px solid var(--ochre-500);
+  }
+  .topbar .left{display:flex;align-items:center;gap:12px;}
+  .seal{
+    width:36px;height:36px;border-radius:50%;
+    background:var(--ochre-500);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Fraunces',serif;font-weight:700;color:var(--green-900);
+    font-size:15px;
+  }
+  .topbar h1{color:var(--white);font-size:17px;}
+  .topbar .sub{font-size:12px;color:var(--ochre-100);margin-top:2px;}
+  .btn-ghost{
+    background:transparent;border:1px solid rgba(255,255,255,.4);color:var(--white);
+    padding:8px 14px;border-radius:4px;font-size:13px;
+  }
+  .btn-ghost:hover{background:rgba(255,255,255,.12);}
+
+  /* ---------- Login ---------- */
+  .login-wrap{max-width:420px;margin:80px auto;padding:0 20px;}
+  .login-card{
+    background:var(--white);border:1px solid var(--line);border-radius:var(--radius-card);
+    padding:32px 28px;text-align:center;
+  }
+  .login-card h2{font-size:22px;margin-bottom:6px;}
+  .login-card p{color:var(--ink-soft);font-size:14px;margin:0 0 22px;}
+  .field{text-align:left;margin-bottom:14px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;text-transform:uppercase;letter-spacing:.03em;}
+  .field input{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:4px;font-size:14px;background:var(--paper);
+  }
+  .field input:focus{outline:2px solid var(--green-600);outline-offset:1px;}
+  .btn-primary{
+    width:100%;background:var(--green-700);color:var(--white);border:none;padding:11px;border-radius:4px;
+    font-size:14px;font-weight:600;margin-top:6px;
+  }
+  .btn-primary:hover{background:var(--green-900);}
+  .btn-primary:disabled{opacity:.6;cursor:default;}
+  .login-error{color:var(--red-700);font-size:13px;margin-top:12px;min-height:16px;}
+
+  /* ---------- Staff shell ---------- */
+  .staff-shell{display:none;}
+  .staff-shell.active{display:grid;grid-template-columns:340px 1fr;gap:0;height:calc(100vh - 66px);}
+  .req-list{border-right:1px solid var(--line);background:var(--white);overflow-y:auto;}
+  .req-list .filters{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:6px;flex-wrap:wrap;}
+  .req-list .programas{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:6px;flex-wrap:wrap;background:var(--paper-dim);}
+  .chip-filter{
+    font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--ink-soft);
+  }
+  .chip-filter.active{background:var(--green-700);color:var(--white);border-color:var(--green-700);}
+  .chip-programa{
+    font-size:12px;padding:5px 10px;border:1px solid var(--ochre-500);border-radius:999px;background:var(--white);color:var(--ochre-600);font-weight:600;
+  }
+  .chip-programa.active{background:var(--ochre-500);color:var(--white);}
+  .req-item{
+    padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;
+  }
+  .req-item:hover{background:var(--paper-dim);}
+  .req-item.selected{background:var(--ochre-100);}
+  .req-item .top-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .req-item .nombre{font-weight:600;font-size:14px;}
+  .req-item .meta{font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
+  .tag{display:inline-block;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:.03em;}
+  .tag-pendiente{background:#f3e4c6;color:#8a5c13;}
+  .tag-en_proceso{background:#dce8e3;color:var(--green-700);}
+  .tag-resuelto{background:#dfe9dc;color:#2f6b3a;}
+  .tag-prioritaria{background:#f6dad3;color:var(--red-700);margin-left:5px;}
+
+  .detail{padding:26px 32px;overflow-y:auto;}
+  .detail-empty{color:var(--ink-soft);font-size:14px;padding:26px 32px;}
+  .detail h2{font-size:21px;}
+  .detail .grid-info{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin:18px 0 22px;font-size:13.5px;}
+  .detail .grid-info div span{display:block;color:var(--ink-soft);font-size:11px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px;}
+  .thread{border:1px solid var(--line);border-radius:4px;background:var(--white);padding:4px 0;margin-bottom:18px;}
+  .msg{padding:10px 16px;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .msg:last-child{border-bottom:none;}
+  .msg .who{font-size:11px;font-weight:600;color:var(--ink-soft);margin-bottom:3px;text-transform:uppercase;}
+  .msg.from-ciudadano{background:var(--paper);}
+  .msg.from-funcionario{background:#eef3f0;}
+  .msg .attachment{
+    display:inline-flex;align-items:center;gap:6px;margin-top:7px;padding:6px 10px;
+    border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;
+    background:var(--white);color:var(--green-700);border:1px solid var(--line);
+  }
+  .attach-row{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12.5px;color:var(--ink-soft);}
+  .attach-row input[type=file]{font-size:12px;}
+  .attach-row .sel-name{font-weight:600;color:var(--green-700);}
+  .reply-box textarea{
+    width:100%;min-height:90px;padding:10px 12px;border:1px solid var(--line);border-radius:4px;font-size:14px;resize:vertical;background:var(--white);
+  }
+  .reply-row{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;}
+  .reply-row select{padding:9px 10px;border:1px solid var(--line);border-radius:4px;font-size:13.5px;background:var(--white);}
+  .btn-save{background:var(--green-700);color:var(--white);border:none;padding:10px 18px;border-radius:4px;font-size:13.5px;font-weight:600;}
+  .btn-save:hover{background:var(--green-900);}
+  .save-msg{font-size:12.5px;color:var(--green-700);margin-left:4px;}
+
+  /* ---------- Badge de canal ---------- */
+  .tag-canal{background:var(--paper-dim);color:var(--ink-soft);border:1px solid var(--line);margin-left:5px;}
+
+  /* ---------- Registro de atención presencial ---------- */
+  .btn-presencial{
+    background:var(--ochre-500);color:var(--green-900);border:none;padding:8px 14px;border-radius:4px;
+    font-size:13px;font-weight:700;
+  }
+  .btn-presencial:hover{background:var(--ochre-600);}
+  .modal-overlay{
+    display:none;position:fixed;inset:0;background:rgba(22,58,47,0.45);z-index:80;
+    align-items:flex-start;justify-content:center;overflow-y:auto;padding:30px 16px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-card{
+    background:var(--white);border-radius:6px;max-width:560px;width:100%;padding:26px 28px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.25);
+  }
+  .modal-card h2{font-size:20px;margin-bottom:4px;}
+  .modal-card .modal-sub{color:var(--ink-soft);font-size:13px;margin-bottom:20px;}
+  .modal-card .field{text-align:left;margin-bottom:13px;}
+  .modal-card .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;}
+  .modal-card .field input, .modal-card .field select, .modal-card .field textarea{
+    width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:4px;font-size:14px;background:var(--paper);font-family:inherit;
+  }
+  .modal-card .field textarea{min-height:70px;resize:vertical;}
+  .modal-row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .check-group{display:flex;flex-wrap:wrap;gap:8px;}
+  .check-chip{
+    border:1px solid var(--line);background:var(--paper);color:var(--ink-soft);
+    border-radius:999px;padding:6px 12px;font-size:12.5px;cursor:pointer;font-weight:500;
+  }
+  .check-chip.selected{background:var(--green-700);color:var(--white);border-color:var(--green-700);}
+  .tag-caract{background:#eef3f0;color:var(--green-700);border:1px solid var(--line);margin-left:5px;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
+  .btn-cancel{background:var(--paper);border:1px solid var(--line);color:var(--ink-soft);padding:10px 16px;border-radius:4px;font-size:13.5px;font-weight:600;}
+  .modal-msg{font-size:13px;margin-top:10px;min-height:16px;}
+  @media (max-width:480px){.modal-row2{grid-template-columns:1fr;}}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important;transition-duration:0.01ms !important;}
+  }
+
+  /* ---------- Responsive: celular ---------- */
+  @media (max-width:760px){
+    .topbar{padding:12px 14px;}
+    .topbar h1{font-size:15px;}
+    .topbar .sub{font-size:11px;}
+    .btn-ghost{padding:7px 11px;font-size:12px;}
+
+    .staff-shell.active{
+      display:block;
+      height:calc(100vh - 62px);
+      overflow-y:auto;
+    }
+    .req-list{border-right:none;border-bottom:1px solid var(--line);}
+    .staff-shell.active.showing-detail .req-list{display:none;}
+    .staff-shell.active:not(.showing-detail) .detail{display:none;}
+    .detail{padding:18px 16px;}
+    .detail .grid-info{grid-template-columns:1fr;}
+    .btn-back{display:inline-block;}
+    .reply-row{flex-direction:column;align-items:stretch;}
+    .reply-row select, .reply-row .btn-save{width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="left">
+    <div class="seal">PS</div>
+    <div>
+      <h1>Panel de funcionarios</h1>
+      <div class="sub" id="topbar-sub">Programas Sociales — Alcaldía de San Antonio</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <button class="btn-presencial" id="btn-presencial" style="display:none;">➕ Atención presencial</button>
+    <button class="btn-ghost" id="btn-logout" style="display:none;">Cerrar sesión</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-card">
+    <h2 id="modal-title">Registrar atención presencial</h2>
+    <p class="modal-sub">Para cuando atiendes a alguien en persona, sin pasar por el chat.</p>
+    <div class="field">
+      <label for="pf-nombre">Nombre completo</label>
+      <input type="text" id="pf-nombre">
+    </div>
+    <div class="modal-row2">
+      <div class="field">
+        <label for="pf-documento">Documento de identidad</label>
+        <input type="text" id="pf-documento" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label for="pf-contacto">Teléfono o correo (opcional)</label>
+        <input type="text" id="pf-contacto">
+      </div>
+    </div>
+    <div class="modal-row2">
+      <div class="field">
+        <label for="pf-programa">Programa</label>
+        <select id="pf-programa"></select>
+      </div>
+      <div class="field">
+        <label for="pf-tipo">Tipo de solicitud</label>
+        <select id="pf-tipo">
+          <option value="Trámite">Trámite</option>
+          <option value="Petición">Petición</option>
+          <option value="Queja">Queja</option>
+          <option value="Reclamo">Reclamo</option>
+          <option value="Sugerencia">Sugerencia</option>
+          <option value="Denuncia">Denuncia</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Caracterización (opcional, puede marcar varias)</label>
+      <div class="check-group" id="pf-caracterizacion"></div>
+      <input type="text" id="pf-otro-detalle" placeholder="¿Cuál?" style="display:none;margin-top:8px;">
+    </div>
+    <div class="field">
+      <label for="pf-descripcion">¿Qué se atendió / qué se le resolvió?</label>
+      <textarea id="pf-descripcion"></textarea>
+    </div>
+    <div class="modal-row2">
+      <div class="field">
+        <label for="pf-duracion">Duración de la atención (minutos)</label>
+        <input type="number" id="pf-duracion" min="1" step="1">
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;" id="pf-hora-registro"></div>
+      </div>
+      <div class="field">
+        <label for="pf-estado">Estado</label>
+        <select id="pf-estado">
+          <option value="resuelto" selected>Resuelto en el momento</option>
+          <option value="en_proceso">Queda en proceso</option>
+          <option value="pendiente">Queda pendiente</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btn-presencial-cancelar">Cancelar</button>
+      <button class="btn-save" id="btn-presencial-guardar">Guardar atención</button>
+    </div>
+    <div class="modal-msg" id="pf-msg" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+<div class="login-wrap" id="login-wrap">
+  <div class="login-card">
+    <h2>Acceso restringido</h2>
+    <p>Ingresa con tu correo institucional asignado.</p>
+    <div class="field">
+      <label>Correo</label>
+      <input type="email" id="login-email" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" id="btn-login">Ingresar</button>
+    <div class="login-error" id="login-error" role="alert" aria-live="assertive"></div>
+  </div>
+</div>
+
+<div class="staff-shell" id="staff-shell">
+  <div class="req-list">
+    <div class="programas" id="programas" style="display:none;"></div>
+    <div class="filters" id="filters"></div>
+    <div id="list-body"></div>
+  </div>
+  <div class="detail" id="detail">
+    <div class="detail-empty">Selecciona una solicitud de la lista para ver el detalle.</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://yjkibftpjvhedbmscbwo.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_elPZQ7xh3ManlHtDWJY1DA_1TgwZvgk';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let perfil = null;          // {id, nombre, programa}
+let solicitudes = [];       // cache de lo que la RLS deja ver
+let filtroEstado = 'todas';
+let filtroPrograma = 'todas';
+let selectedId = null;
+const PROGRAMAS = ['Adulto Mayor','Discapacidad','Víctimas del Conflicto','Comunidades Indígenas','Renta Ciudadana','Renta Joven','Devolución del IVA'];
+
+/* ---------- Arranque: revisa si ya hay sesión activa ---------- */
+(async function boot(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){
+    await afterLogin();
+  }
+})();
+
+document.getElementById('btn-login').addEventListener('click', doLogin);
+document.getElementById('login-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('btn-logout').addEventListener('click', doLogout);
+
+async function doLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const errBox = document.getElementById('login-error');
+  const btn = document.getElementById('btn-login');
+  errBox.textContent = '';
+  if(!email || !pass){ errBox.textContent = 'Completa correo y contraseña.'; return; }
+  btn.disabled = true; btn.textContent = 'Ingresando...';
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if(error){
+    btn.disabled = false; btn.textContent = 'Ingresar';
+    errBox.textContent = 'Credenciales incorrectas o usuario no autorizado.';
+    console.error(error);
+    return;
+  }
+  // Recargamos la página completa: evita que quede "pegada" en memoria
+  // la sesión o los datos de la cuenta anterior al cambiar de usuario.
+  btn.textContent = 'Entrando...';
+  window.location.reload();
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  // Recarga completa para limpiar cualquier dato en memoria de la sesión anterior.
+  window.location.reload();
+}
+
+async function afterLogin(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user){ return; }
+  const { data, error } = await sb.from('perfiles_funcionario').select('*').eq('id', user.id).single();
+  if(error || !data){
+    document.getElementById('login-error').textContent = 'Tu usuario no tiene un perfil de funcionario asignado. Pide al coordinador que te vincule.';
+    await sb.auth.signOut();
+    return;
+  }
+  perfil = data;
+  // Compatibilidad: si el perfil solo tiene "programa" (sin "programas"), lo tratamos como una lista de 1.
+  const misProgramas = (Array.isArray(perfil.programas) && perfil.programas.length > 0)
+    ? perfil.programas
+    : (perfil.programa ? [perfil.programa] : []);
+  perfil.misProgramas = misProgramas;
+  const esCoordinador = misProgramas.includes('TODAS');
+
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('btn-logout').style.display = 'inline-block';
+  document.getElementById('btn-presencial').style.display = 'inline-block';
+  document.getElementById('staff-shell').classList.add('active');
+  document.getElementById('topbar-sub').textContent =
+    (perfil.nombre || 'Funcionario') + ' · ' + (esCoordinador ? 'Coordinación (todos los programas)' : misProgramas.join(', '));
+
+  // Mostramos el selector de programa si el funcionario ve más de uno (coordinador, o varios programas a cargo)
+  if(esCoordinador || misProgramas.length > 1){
+    document.getElementById('programas').style.display = 'flex';
+    renderProgramas(esCoordinador ? PROGRAMAS : misProgramas);
+  }
+  renderFilters();
+  await loadSolicitudes();
+}
+
+function renderProgramas(listaProgramas){
+  const wrap = document.getElementById('programas');
+  const opts = [['todas','Todos mis programas'], ...listaProgramas.map(p => [p,p])];
+  wrap.innerHTML = opts.map(([v,l]) =>
+    `<button class="chip-programa${filtroPrograma===v?' active':''}" data-v="${escapeHtml(v)}">${escapeHtml(l)}</button>`
+  ).join('');
+  wrap.querySelectorAll('.chip-programa').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ filtroPrograma = btn.dataset.v; selectedId = null; renderProgramas(listaProgramas); renderList(); renderDetail(); });
+  });
+}
+
+function renderFilters(){
+  const wrap = document.getElementById('filters');
+  const opts = [
+    ['todas','Todas'],
+    ['pendiente','Pendientes'],
+    ['en_proceso','En proceso'],
+    ['resuelto','Resueltas'],
+  ];
+  wrap.innerHTML = opts.map(([v,l]) =>
+    `<button class="chip-filter${filtroEstado===v?' active':''}" data-v="${v}">${l}</button>`
+  ).join('');
+  wrap.querySelectorAll('.chip-filter').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ filtroEstado = btn.dataset.v; renderFilters(); renderList(); });
+  });
+}
+
+async function loadSolicitudes(){
+  // La RLS ya filtra por programa del funcionario (o deja ver todo si es 'TODAS').
+  const { data, error } = await sb.from('solicitudes').select('*').order('created_at', { ascending:true });
+  if(error){ console.error(error); document.getElementById('list-body').innerHTML = '<div style="padding:16px;font-size:13px;color:var(--ink-soft);">No se pudo cargar la lista.</div>'; return; }
+  solicitudes = (data || []).sort((a,b)=>{
+    if(a.prioritaria !== b.prioritaria) return a.prioritaria ? -1 : 1;
+    return 0; // el orden por fecha ya viene de la consulta; solo reordenamos prioritarias arriba
+  });
+  calcularTurnos();
+  renderList();
+}
+
+function fechaDe(s){
+  return s.created_at || (s.historial && s.historial[0] && s.historial[0].ts) || null;
+}
+
+// Calcula el turno de cada solicitud en espera (pendiente/en_proceso), por programa,
+// según el orden de llegada. Se recalcula cada vez que se carga la lista, así que
+// al resolver una, las demás bajan de número solas.
+function calcularTurnos(){
+  const porPrograma = {};
+  solicitudes
+    .filter(s => s.estado === 'pendiente' || s.estado === 'en_proceso')
+    .slice()
+    .sort((a,b) => String(fechaDe(a) || '').localeCompare(String(fechaDe(b) || '')))
+    .forEach(s => {
+      porPrograma[s.programa] = (porPrograma[s.programa] || 0) + 1;
+      s._turno = porPrograma[s.programa];
+      s._totalEnEspera = null; // se completa abajo
+    });
+  solicitudes.forEach(s => {
+    if(s._turno) s._totalEnEspera = porPrograma[s.programa];
+  });
+}
+
+function renderList(){
+  const body = document.getElementById('list-body');
+  const items = solicitudes.filter(s => {
+    const pasaEstado = filtroEstado === 'todas' ? true : s.estado === filtroEstado;
+    const pasaPrograma = filtroPrograma === 'todas' ? true : s.programa === filtroPrograma;
+    return pasaEstado && pasaPrograma;
+  });
+  if(items.length === 0){
+    body.innerHTML = '<div style="padding:16px;font-size:13px;color:var(--ink-soft);">No hay solicitudes en este filtro.</div>';
+    return;
+  }
+  body.innerHTML = items.map(s => {
+    const f = fechaDe(s);
+    const fecha = f ? new Date(f).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}) : '';
+    return `<div class="req-item${s.id===selectedId?' selected':''}" data-id="${s.id}">
+      <div class="top-row">
+        <span class="nombre">${escapeHtml(s.nombre || 'Sin nombre')}</span>
+        <span class="tag tag-${s.estado}">${labelEstado(s.estado)}</span>
+      </div>
+      <div class="meta">${escapeHtml(s.programa || '')} · ${escapeHtml(s.tipo || '')} ${s.prioritaria ? '<span class="tag tag-prioritaria">Prioritaria</span>' : ''}${s.canal === 'presencial' ? '<span class="tag tag-canal">Presencial</span>' : ''}${s._turno ? `<span class="tag tag-canal">Turno ${s._turno}</span>` : ''}</div>
+      <div class="meta">${fecha}</div>
+    </div>`;
+  }).join('');
+  body.querySelectorAll('.req-item').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      selectedId = el.dataset.id;
+      document.getElementById('staff-shell').classList.add('showing-detail');
+      renderList(); renderDetail();
+    });
+  });
+}
+
+function labelEstado(e){
+  return { pendiente:'Pendiente', en_proceso:'En proceso', resuelto:'Resuelto' }[e] || e || '';
+}
+
+function renderDetail(){
+  const wrap = document.getElementById('detail');
+  const s = solicitudes.find(x => x.id === selectedId);
+  if(!s){ wrap.innerHTML = '<div class="detail-empty">Selecciona una solicitud de la lista para ver el detalle.</div>'; return; }
+  const hist = s.historial || [];
+  wrap.innerHTML = `
+    <button class="btn-back" id="btn-back">← Volver a la lista</button>
+    <h2>${escapeHtml(s.nombre || 'Sin nombre')} <span class="tag tag-${s.estado}">${labelEstado(s.estado)}</span>${s.prioritaria?' <span class="tag tag-prioritaria">Prioritaria</span>':''}${s._turno ? ` <span class="tag tag-canal">Turno ${s._turno} de ${s._totalEnEspera}</span>` : ''}</h2>
+    <div class="grid-info">
+      <div><span>Documento</span>${escapeHtml(s.documento || '—')}</div>
+      <div><span>Contacto</span>${escapeHtml(s.contacto || '—')}</div>
+      <div><span>Programa</span>${escapeHtml(s.programa || '—')}</div>
+      <div><span>Tipo de trámite</span>${escapeHtml(s.tipo || '—')}</div>
+      <div><span>Canal</span>${s.canal === 'presencial' ? 'Atención presencial' : 'Chatbot'}</div>
+      <div><span>Atendido por</span>${escapeHtml(s.atendido_por || '—')}</div>
+      ${s.canal === 'presencial' && s.duracion_minutos ? `<div><span>Duración</span>${s.duracion_minutos} min</div>` : ''}
+    </div>
+    ${Array.isArray(s.caracterizacion) && s.caracterizacion.length ? `<div style="margin:-10px 0 18px;">${s.caracterizacion.map(c => `<span class="tag tag-caract">${escapeHtml(c)}</span>`).join(' ')}</div>` : ''}
+    <div class="thread" id="thread">
+      ${hist.map(m => `<div class="msg from-${m.de}">
+        <div class="who">${m.de === 'ciudadano' ? 'Ciudadano' : 'Funcionario'} · ${m.ts ? new Date(m.ts).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}) : ''}</div>
+        <div>${escapeHtml(m.texto || '')}</div>
+        ${m.archivo && m.archivo.url ? `<a class="attachment" href="${escapeHtml(m.archivo.url)}" target="_blank" rel="noopener" download>📄 ${escapeHtml(m.archivo.nombre || 'Documento')}</a>` : ''}
+      </div>`).join('') || '<div class="msg">Sin mensajes.</div>'}
+    </div>
+    <div class="reply-box">
+      <label for="reply-text" class="sr-only">Respuesta para el ciudadano</label>
+      <textarea id="reply-text" placeholder="Escribe la respuesta para el ciudadano..."></textarea>
+      <div class="attach-row">
+        <label for="reply-file">📎 Adjuntar PDF (máx. 5 MB):</label>
+        <input type="file" id="reply-file" accept="application/pdf">
+        <span class="sel-name" id="reply-file-name"></span>
+      </div>
+      <div class="reply-row">
+        <select id="estado-select">
+          <option value="pendiente"${s.estado==='pendiente'?' selected':''}>Pendiente</option>
+          <option value="en_proceso"${s.estado==='en_proceso'?' selected':''}>En proceso</option>
+          <option value="resuelto"${s.estado==='resuelto'?' selected':''}>Resuelto</option>
+        </select>
+        <button class="btn-save" id="btn-save">Guardar</button>
+        <span class="save-msg" id="save-msg" role="status" aria-live="polite"></span>
+      </div>
+    </div>
+  `;
+  document.getElementById('reply-file').addEventListener('change', (e)=>{
+    const f = e.target.files[0];
+    document.getElementById('reply-file-name').textContent = f ? f.name : '';
+  });
+  document.getElementById('btn-save').addEventListener('click', ()=> guardarRespuesta(s));
+  const backBtn = document.getElementById('btn-back');
+  if(backBtn) backBtn.addEventListener('click', ()=>{
+    document.getElementById('staff-shell').classList.remove('showing-detail');
+    selectedId = null;
+    renderList(); renderDetail();
+  });
+}
+
+const MAX_PDF_BYTES = 5 * 1024 * 1024;
+
+async function subirPdfFuncionario(file, solicitudId){
+  if(file.type !== 'application/pdf') throw new Error('TIPO');
+  if(file.size > MAX_PDF_BYTES) throw new Error('TAMANO');
+  const path = `${solicitudId}/${Date.now()}-${file.name}`.replace(/\s+/g,'_');
+  const { error } = await sb.storage.from('adjuntos').upload(path, file, { contentType:'application/pdf' });
+  if(error){ console.error(error); throw new Error('SUBIDA'); }
+  const { data } = sb.storage.from('adjuntos').getPublicUrl(path);
+  return { url: data.publicUrl, nombre: file.name };
+}
+
+async function guardarRespuesta(s){
+  const texto = document.getElementById('reply-text').value.trim();
+  const nuevoEstado = document.getElementById('estado-select').value;
+  const fileInput = document.getElementById('reply-file');
+  const file = fileInput.files[0];
+  const saveMsg = document.getElementById('save-msg');
+  const btn = document.getElementById('btn-save');
+
+  if(!texto && !file){
+    saveMsg.textContent = 'Escribe una respuesta o adjunta un documento.';
+    saveMsg.style.color = 'var(--red-700)';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  saveMsg.textContent = '';
+
+  let archivo = null;
+  if(file){
+    try{
+      saveMsg.textContent = 'Subiendo documento…';
+      archivo = await subirPdfFuncionario(file, s.id);
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Guardar';
+      let msg = 'No se pudo subir el documento.';
+      if(e.message === 'TIPO') msg = 'Solo se admiten archivos PDF.';
+      if(e.message === 'TAMANO') msg = 'El archivo supera 5 MB.';
+      saveMsg.textContent = msg;
+      saveMsg.style.color = 'var(--red-700)';
+      return;
+    }
+  }
+
+  const hist = Array.isArray(s.historial) ? [...s.historial] : [];
+  const entrada = { de:'funcionario', texto, ts: new Date().toISOString(), por: perfil.nombre || '' };
+  if(archivo) entrada.archivo = archivo;
+  if(texto || archivo) hist.push(entrada);
+
+  const { error } = await sb.from('solicitudes').update({
+    estado: nuevoEstado,
+    historial: hist,
+    atendido_por: perfil.nombre || s.atendido_por || null
+  }).eq('id', s.id);
+  btn.disabled = false; btn.textContent = 'Guardar';
+  if(error){
+    console.error(error);
+    saveMsg.textContent = 'Error al guardar.';
+    saveMsg.style.color = 'var(--red-700)';
+    return;
+  }
+  saveMsg.textContent = 'Guardado ✓';
+  saveMsg.style.color = 'var(--green-700)';
+  document.getElementById('reply-text').value = '';
+  fileInput.value = '';
+  await loadSolicitudes();
+  renderDetail();
+}
+
+function escapeHtml(str){
+  return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ============================================================
+   Registro de atención presencial
+============================================================ */
+document.getElementById('btn-presencial').addEventListener('click', abrirModalPresencial);
+document.getElementById('btn-presencial-cancelar').addEventListener('click', cerrarModalPresencial);
+document.getElementById('btn-presencial-guardar').addEventListener('click', guardarPresencial);
+document.getElementById('modal-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'modal-overlay') cerrarModalPresencial();
+});
+
+const CARACTERIZACION_OPCIONES = ['Víctima del conflicto','Discapacidad','LGBTI','Desmovilizado','Indígena','Otro'];
+let pfCaracterizacion = [];
+
+function renderCaracterizacionCheckboxes(){
+  const wrap = document.getElementById('pf-caracterizacion');
+  const otroGuardado = pfCaracterizacion.find(c => c === 'Otro' || c.startsWith('Otro:'));
+  wrap.innerHTML = CARACTERIZACION_OPCIONES.map(op => {
+    const esOtro = op === 'Otro';
+    const seleccionado = esOtro ? !!otroGuardado : pfCaracterizacion.includes(op);
+    const etiqueta = esOtro && otroGuardado ? otroGuardado : op;
+    return `<button type="button" class="check-chip${seleccionado?' selected':''}" data-v="${escapeHtml(op)}" aria-pressed="${seleccionado}">${escapeHtml(etiqueta)}</button>`;
+  }).join('');
+  wrap.querySelectorAll('.check-chip').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const v = btn.dataset.v;
+      const detalleInput = document.getElementById('pf-otro-detalle');
+      if(v === 'Otro'){
+        const idx = pfCaracterizacion.findIndex(c => c === 'Otro' || c.startsWith('Otro:'));
+        if(idx >= 0){
+          pfCaracterizacion.splice(idx,1);
+          detalleInput.style.display = 'none';
+          detalleInput.value = '';
+        } else {
+          detalleInput.style.display = 'block';
+          detalleInput.value = '';
+          detalleInput.focus();
+        }
+        return renderCaracterizacionCheckboxes();
+      }
+      const idx = pfCaracterizacion.indexOf(v);
+      if(idx>=0) pfCaracterizacion.splice(idx,1); else pfCaracterizacion.push(v);
+      renderCaracterizacionCheckboxes();
+    });
+  });
+}
+
+document.getElementById('pf-otro-detalle').addEventListener('input', (e)=>{
+  const idx = pfCaracterizacion.findIndex(c => c === 'Otro' || c.startsWith('Otro:'));
+  const texto = e.target.value.trim();
+  const valor = texto ? ('Otro: ' + texto) : 'Otro';
+  if(idx >= 0) pfCaracterizacion[idx] = valor; else pfCaracterizacion.push(valor);
+});
+
+function abrirModalPresencial(){
+  const esCoordinador = perfil.misProgramas.includes('TODAS');
+  const opciones = esCoordinador ? PROGRAMAS : perfil.misProgramas;
+  const sel = document.getElementById('pf-programa');
+  sel.innerHTML = opciones.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+
+  document.getElementById('pf-nombre').value = '';
+  document.getElementById('pf-documento').value = '';
+  document.getElementById('pf-contacto').value = '';
+  document.getElementById('pf-tipo').value = 'Trámite';
+  document.getElementById('pf-descripcion').value = '';
+  document.getElementById('pf-duracion').value = '';
+  document.getElementById('pf-estado').value = 'resuelto';
+  document.getElementById('pf-msg').textContent = '';
+  document.getElementById('pf-otro-detalle').style.display = 'none';
+  document.getElementById('pf-otro-detalle').value = '';
+  document.getElementById('pf-hora-registro').textContent =
+    'Hora de registro: ' + new Date().toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'});
+  pfCaracterizacion = [];
+  renderCaracterizacionCheckboxes();
+
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('pf-nombre').focus();
+}
+
+function cerrarModalPresencial(){
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+async function guardarPresencial(){
+  const nombre = document.getElementById('pf-nombre').value.trim();
+  const documento = document.getElementById('pf-documento').value.trim().replace(/\D/g,'');
+  const contacto = document.getElementById('pf-contacto').value.trim();
+  const programa = document.getElementById('pf-programa').value;
+  const tipo = document.getElementById('pf-tipo').value;
+  const descripcion = document.getElementById('pf-descripcion').value.trim();
+  const duracion = parseInt(document.getElementById('pf-duracion').value, 10);
+  const estado = document.getElementById('pf-estado').value;
+  const msg = document.getElementById('pf-msg');
+  const btn = document.getElementById('btn-presencial-guardar');
+
+  if(!nombre || !documento || !descripcion){
+    msg.textContent = 'Completa al menos nombre, documento y qué se atendió.';
+    msg.style.color = 'var(--red-700)';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  const id = crypto.randomUUID();
+  const ahora = new Date().toISOString();
+  const { error } = await sb.from('solicitudes').insert({
+    id,
+    nombre,
+    documento,
+    contacto: contacto || null,
+    programa,
+    tipo,
+    descripcion,
+    prioritaria: false,
+    estado,
+    canal: 'presencial',
+    atendido_por: perfil.nombre || '',
+    duracion_minutos: isNaN(duracion) ? null : duracion,
+    caracterizacion: pfCaracterizacion.length ? pfCaracterizacion : null,
+    historial: [{ de:'funcionario', texto: descripcion, ts: ahora, por: perfil.nombre || '' }]
+  });
+  btn.disabled = false; btn.textContent = 'Guardar atención';
+
+  if(error){
+    console.error(error);
+    msg.textContent = 'No se pudo guardar. Intenta de nuevo.';
+    msg.style.color = 'var(--red-700)';
+    return;
+  }
+  cerrarModalPresencial();
+  await loadSolicitudes();
+}
+</script>
+</body>
+</html>
