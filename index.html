@@ -617,12 +617,16 @@ async function inicializarApariencia(){
     if(!data) return;
     if(data.logo_url){
       const seal = document.getElementById('seal');
-      seal.innerHTML = `<img src="${data.logo_url}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima">`;
+      const px = data.logo_pos_x ?? 50, py = data.logo_pos_y ?? 50;
+      seal.innerHTML = `<img src="${data.logo_url}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima" style="object-position:${px}% ${py}%;">`;
       seal.removeAttribute('aria-hidden');
     }
     if(data.header_fondo_url){
       const topbar = document.getElementById('topbar');
-      topbar.style.backgroundImage = `linear-gradient(rgba(31,75,63,0.78), rgba(31,75,63,0.78)), url('${data.header_fondo_url}')`;
+      const fx = data.header_fondo_pos_x ?? 50, fy = data.header_fondo_pos_y ?? 50;
+      const ov = (data.header_fondo_overlay ?? 55) / 100;
+      topbar.style.backgroundImage = `linear-gradient(rgba(31,75,63,${ov}), rgba(31,75,63,${ov})), url('${data.header_fondo_url}')`;
+      topbar.style.backgroundPosition = `${fx}% ${fy}%`;
     }
   }catch(e){ /* si no hay configuración todavía, se queda con el diseño por defecto */ }
 }

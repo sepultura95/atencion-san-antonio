@@ -264,21 +264,40 @@
     <div class="field">
       <label>Escudo / logo (reemplaza el círculo "SA")</label>
       <div style="display:flex;align-items:center;gap:12px;margin-top:6px;">
-        <div id="ap-logo-preview" style="width:48px;height:48px;border-radius:50%;background:var(--ochre-500);overflow:hidden;flex:none;display:flex;align-items:center;justify-content:center;color:var(--green-900);font-weight:700;">SA</div>
+        <div id="ap-logo-preview" style="width:64px;height:64px;border-radius:50%;background:var(--ochre-500);overflow:hidden;flex:none;display:flex;align-items:center;justify-content:center;color:var(--green-900);font-weight:700;">
+          <img id="ap-logo-preview-img" style="display:none;width:100%;height:100%;object-fit:cover;">
+          <span id="ap-logo-preview-txt">SA</span>
+        </div>
         <input type="file" id="ap-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
       </div>
-      <div style="margin-top:8px;display:flex;gap:10px;">
+      <div id="ap-logo-pos-ctrl" style="display:none;margin-top:10px;">
+        <label style="font-size:11.5px;color:var(--ink-soft);">Mover la imagen — horizontal</label>
+        <input type="range" id="ap-logo-posx" min="0" max="100" value="50" style="width:100%;">
+        <label style="font-size:11.5px;color:var(--ink-soft);">Mover la imagen — vertical</label>
+        <input type="range" id="ap-logo-posy" min="0" max="100" value="50" style="width:100%;">
+      </div>
+      <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn-small" id="btn-ap-logo-subir" style="background:var(--green-700);color:#fff;">Subir logo</button>
+        <button class="btn-small" id="btn-ap-logo-guardar-pos" style="background:var(--ochre-600);color:#fff;display:none;">Guardar posición</button>
         <button class="btn-small" id="btn-ap-logo-quitar" style="background:var(--paper-dim);">Quitar logo (usar por defecto)</button>
       </div>
     </div>
 
     <div class="field" style="margin-top:18px;">
       <label>Imagen de fondo del encabezado (opcional)</label>
-      <div id="ap-fondo-preview" style="width:100%;height:60px;border-radius:6px;background:var(--green-700);margin-top:6px;background-size:cover;background-position:center;"></div>
+      <div id="ap-fondo-preview" style="width:100%;height:70px;border-radius:6px;background:var(--green-700);margin-top:6px;background-size:cover;display:flex;align-items:center;padding:0 14px;color:#fff;font-size:12px;font-weight:600;">Así se verá el encabezado</div>
       <input type="file" id="ap-fondo-file" accept="image/png,image/jpeg,image/webp" style="margin-top:8px;">
-      <div style="margin-top:8px;display:flex;gap:10px;">
+      <div id="ap-fondo-pos-ctrl" style="display:none;margin-top:10px;">
+        <label style="font-size:11.5px;color:var(--ink-soft);">Mover la imagen — horizontal</label>
+        <input type="range" id="ap-fondo-posx" min="0" max="100" value="50" style="width:100%;">
+        <label style="font-size:11.5px;color:var(--ink-soft);">Mover la imagen — vertical</label>
+        <input type="range" id="ap-fondo-posy" min="0" max="100" value="50" style="width:100%;">
+        <label style="font-size:11.5px;color:var(--ink-soft);">Oscurecer para que el texto se lea bien</label>
+        <input type="range" id="ap-fondo-overlay" min="0" max="90" value="55" style="width:100%;">
+      </div>
+      <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn-small" id="btn-ap-fondo-subir" style="background:var(--green-700);color:#fff;">Subir fondo</button>
+        <button class="btn-small" id="btn-ap-fondo-guardar-pos" style="background:var(--ochre-600);color:#fff;display:none;">Guardar ajustes</button>
         <button class="btn-small" id="btn-ap-fondo-quitar" style="background:var(--paper-dim);">Quitar fondo (usar color por defecto)</button>
       </div>
     </div>
@@ -425,11 +444,15 @@ async function inicializarApariencia(){
     if(!data) return;
     if(data.logo_url){
       const seal = document.getElementById('seal');
-      seal.innerHTML = `<img src="${data.logo_url}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima">`;
+      const px = data.logo_pos_x ?? 50, py = data.logo_pos_y ?? 50;
+      seal.innerHTML = `<img src="${data.logo_url}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima" style="object-position:${px}% ${py}%;">`;
     }
     if(data.header_fondo_url){
       const topbar = document.getElementById('topbar');
-      topbar.style.backgroundImage = `linear-gradient(rgba(31,75,63,0.78), rgba(31,75,63,0.78)), url('${data.header_fondo_url}')`;
+      const fx = data.header_fondo_pos_x ?? 50, fy = data.header_fondo_pos_y ?? 50;
+      const ov = (data.header_fondo_overlay ?? 55) / 100;
+      topbar.style.backgroundImage = `linear-gradient(rgba(31,75,63,${ov}), rgba(31,75,63,${ov})), url('${data.header_fondo_url}')`;
+      topbar.style.backgroundPosition = `${fx}% ${fy}%`;
     }
   }catch(e){ /* sin configuración todavía: queda el diseño por defecto */ }
 }
@@ -769,6 +792,7 @@ function escapeHtml(str){
    Apariencia del encabezado — solo coordinador
 ============================================================ */
 const MAX_IMG_BYTES = 2 * 1024 * 1024;
+let apConfigActual = null;
 
 document.getElementById('btn-apariencia').addEventListener('click', abrirModalApariencia);
 document.getElementById('btn-apariencia-cerrar').addEventListener('click', cerrarModalApariencia);
@@ -779,16 +803,76 @@ document.getElementById('btn-ap-logo-subir').addEventListener('click', ()=>subir
 document.getElementById('btn-ap-fondo-subir').addEventListener('click', ()=>subirImagenApariencia('header_fondo_url', document.getElementById('ap-fondo-file')));
 document.getElementById('btn-ap-logo-quitar').addEventListener('click', ()=>quitarImagenApariencia('logo_url'));
 document.getElementById('btn-ap-fondo-quitar').addEventListener('click', ()=>quitarImagenApariencia('header_fondo_url'));
+document.getElementById('btn-ap-logo-guardar-pos').addEventListener('click', guardarPosicionLogo);
+document.getElementById('btn-ap-fondo-guardar-pos').addEventListener('click', guardarPosicionFondo);
+
+['ap-logo-posx','ap-logo-posy'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', actualizarPreviewLogo);
+});
+['ap-fondo-posx','ap-fondo-posy','ap-fondo-overlay'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', actualizarPreviewFondo);
+});
+
+function actualizarPreviewLogo(){
+  const img = document.getElementById('ap-logo-preview-img');
+  const x = document.getElementById('ap-logo-posx').value;
+  const y = document.getElementById('ap-logo-posy').value;
+  img.style.objectPosition = x + '% ' + y + '%';
+}
+
+function actualizarPreviewFondo(){
+  const prev = document.getElementById('ap-fondo-preview');
+  const x = document.getElementById('ap-fondo-posx').value;
+  const y = document.getElementById('ap-fondo-posy').value;
+  const ov = document.getElementById('ap-fondo-overlay').value;
+  prev.style.backgroundPosition = x + '% ' + y + '%';
+  if(apConfigActual && apConfigActual.header_fondo_url){
+    prev.style.backgroundImage = `linear-gradient(rgba(31,75,63,${ov/100}), rgba(31,75,63,${ov/100})), url('${apConfigActual.header_fondo_url}')`;
+  }
+}
 
 async function abrirModalApariencia(){
   document.getElementById('ap-msg').textContent = '';
   document.getElementById('ap-logo-file').value = '';
   document.getElementById('ap-fondo-file').value = '';
   const { data } = await sb.from('configuracion_sitio').select('*').eq('id', 1).single();
-  const logoPrev = document.getElementById('ap-logo-preview');
-  const fondoPrev = document.getElementById('ap-fondo-preview');
-  logoPrev.innerHTML = (data && data.logo_url) ? `<img src="${data.logo_url}" style="width:100%;height:100%;object-fit:cover;">` : 'SA';
-  fondoPrev.style.backgroundImage = (data && data.header_fondo_url) ? `url('${data.header_fondo_url}')` : 'none';
+  apConfigActual = data || {};
+
+  const logoImg = document.getElementById('ap-logo-preview-img');
+  const logoTxt = document.getElementById('ap-logo-preview-txt');
+  const logoPosCtrl = document.getElementById('ap-logo-pos-ctrl');
+  const logoGuardarBtn = document.getElementById('btn-ap-logo-guardar-pos');
+  if(apConfigActual.logo_url){
+    logoImg.src = apConfigActual.logo_url;
+    logoImg.style.display = 'block';
+    logoTxt.style.display = 'none';
+    document.getElementById('ap-logo-posx').value = apConfigActual.logo_pos_x ?? 50;
+    document.getElementById('ap-logo-posy').value = apConfigActual.logo_pos_y ?? 50;
+    actualizarPreviewLogo();
+    logoPosCtrl.style.display = 'block';
+    logoGuardarBtn.style.display = 'inline-block';
+  } else {
+    logoImg.style.display = 'none';
+    logoTxt.style.display = 'block';
+    logoPosCtrl.style.display = 'none';
+    logoGuardarBtn.style.display = 'none';
+  }
+
+  const fondoPosCtrl = document.getElementById('ap-fondo-pos-ctrl');
+  const fondoGuardarBtn = document.getElementById('btn-ap-fondo-guardar-pos');
+  if(apConfigActual.header_fondo_url){
+    document.getElementById('ap-fondo-posx').value = apConfigActual.header_fondo_pos_x ?? 50;
+    document.getElementById('ap-fondo-posy').value = apConfigActual.header_fondo_pos_y ?? 50;
+    document.getElementById('ap-fondo-overlay').value = apConfigActual.header_fondo_overlay ?? 55;
+    actualizarPreviewFondo();
+    fondoPosCtrl.style.display = 'block';
+    fondoGuardarBtn.style.display = 'inline-block';
+  } else {
+    document.getElementById('ap-fondo-preview').style.backgroundImage = 'none';
+    fondoPosCtrl.style.display = 'none';
+    fondoGuardarBtn.style.display = 'none';
+  }
+
   document.getElementById('modal-apariencia-overlay').classList.add('open');
 }
 
@@ -807,10 +891,33 @@ async function subirImagenApariencia(campo, inputFile){
   const { error: upErr } = await sb.storage.from('branding').upload(ruta, file, { upsert: true });
   if(upErr){ msg.textContent = 'Error al subir: ' + upErr.message; return; }
   const { data: pub } = sb.storage.from('branding').getPublicUrl(ruta);
-  const { error: dbErr } = await sb.from('configuracion_sitio').update({ [campo]: pub.publicUrl, updated_at: new Date().toISOString() }).eq('id', 1);
+  const campoPosX = campo === 'logo_url' ? 'logo_pos_x' : 'header_fondo_pos_x';
+  const campoPosY = campo === 'logo_url' ? 'logo_pos_y' : 'header_fondo_pos_y';
+  const actualizacion = { [campo]: pub.publicUrl, [campoPosX]: 50, [campoPosY]: 50, updated_at: new Date().toISOString() };
+  if(campo === 'header_fondo_url') actualizacion.header_fondo_overlay = 55;
+  const { error: dbErr } = await sb.from('configuracion_sitio').update(actualizacion).eq('id', 1);
   if(dbErr){ msg.textContent = 'Error al guardar: ' + dbErr.message; return; }
-  msg.textContent = 'Listo, imagen actualizada.';
+  msg.textContent = 'Listo, imagen subida. Ajusta la posición abajo si lo necesitas.';
   await abrirModalApariencia();
+  await inicializarApariencia();
+}
+
+async function guardarPosicionLogo(){
+  const msg = document.getElementById('ap-msg');
+  const x = parseInt(document.getElementById('ap-logo-posx').value, 10);
+  const y = parseInt(document.getElementById('ap-logo-posy').value, 10);
+  const { error } = await sb.from('configuracion_sitio').update({ logo_pos_x: x, logo_pos_y: y, updated_at: new Date().toISOString() }).eq('id', 1);
+  msg.textContent = error ? ('Error: ' + error.message) : 'Posición del logo guardada.';
+  await inicializarApariencia();
+}
+
+async function guardarPosicionFondo(){
+  const msg = document.getElementById('ap-msg');
+  const x = parseInt(document.getElementById('ap-fondo-posx').value, 10);
+  const y = parseInt(document.getElementById('ap-fondo-posy').value, 10);
+  const ov = parseInt(document.getElementById('ap-fondo-overlay').value, 10);
+  const { error } = await sb.from('configuracion_sitio').update({ header_fondo_pos_x: x, header_fondo_pos_y: y, header_fondo_overlay: ov, updated_at: new Date().toISOString() }).eq('id', 1);
+  msg.textContent = error ? ('Error: ' + error.message) : 'Ajustes del fondo guardados.';
   await inicializarApariencia();
 }
 
