@@ -772,7 +772,7 @@ function openChat(){
       botStart('MENU');
       const estadoHorarioActual = obtenerEstadoHorario();
       if(!estadoHorarioActual.abierto || avisoNoLaboralHoy){
-        addMsg(mensajeFueraHorario() + '\n\n' + HORARIO_TEXTO.join('\n'), 'system');
+        addMsg(mensajeFueraHorario(), 'system');
       }
     }
     const input = document.getElementById('chat-text');
