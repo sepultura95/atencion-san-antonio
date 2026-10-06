@@ -103,6 +103,17 @@
   }
   .mode-switch button.active{background:var(--ochre-500);color:var(--green-900);opacity:1;font-weight:600;}
 
+  .text-ctrl{display:flex;gap:4px;flex:none;}
+  .text-ctrl button{
+    background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.35);color:var(--white);
+    width:30px;height:30px;border-radius:6px;font-weight:700;cursor:pointer;line-height:1;
+  }
+  .text-ctrl button:hover,.text-ctrl button:focus-visible{background:rgba(255,255,255,0.25);}
+  .text-ctrl button:nth-child(1){font-size:11px;}
+  .text-ctrl button:nth-child(2){font-size:13px;}
+  .text-ctrl button:nth-child(3){font-size:15px;}
+  @media (max-width:420px){ .text-ctrl button{width:26px;height:26px;} }
+
   .proto-banner{
     background:var(--ochre-100);
     color:var(--green-900);
@@ -110,6 +121,17 @@
     text-align:center;
     padding:6px 14px;
     border-bottom:1px solid var(--ochre-500);
+  }
+
+  .horario-banner{
+    font-size:12.5px;text-align:center;padding:8px 14px;border-bottom:1px solid var(--line);
+    display:none;
+  }
+  .horario-banner.abierto{background:#e4efe7;color:var(--green-900);border-bottom-color:var(--green-600);}
+  .horario-banner.cerrado{background:var(--ochre-100);color:var(--green-900);border-bottom-color:var(--ochre-500);}
+  .horario-banner strong{font-weight:700;}
+  .horario-banner button{
+    background:none;border:none;text-decoration:underline;color:inherit;font-size:inherit;cursor:pointer;font-weight:600;margin-left:4px;
   }
 
   /* ---------- Citizen view ---------- */
@@ -383,6 +405,16 @@
     <div class="muni">Alcaldía Municipal de San Antonio, Tolima</div>
     <div class="site">Atención al usuario · Programas Sociales</div>
   </div>
+  <div class="text-ctrl" role="group" aria-label="Tamaño del texto">
+    <button type="button" onclick="cambiarTextoTamano(-1)" aria-label="Disminuir tamaño de texto">A-</button>
+    <button type="button" onclick="cambiarTextoTamano(0)" aria-label="Tamaño de texto normal">A</button>
+    <button type="button" onclick="cambiarTextoTamano(1)" aria-label="Aumentar tamaño de texto">A+</button>
+  </div>
+</div>
+
+<div class="horario-banner" id="horario-banner" role="status">
+  <span id="horario-banner-texto"></span>
+  <button type="button" onclick="mostrarHorarioCompleto()">Ver horario de atención</button>
 </div>
 
 <!-- ===================== CIUDADANO ===================== -->
@@ -442,7 +474,10 @@
     </div>
   </main>
   <footer class="site-footer">
-    <div class="wrap">Alcaldía Municipal de San Antonio, Tolima · Prototipo construido para la Fase 1 del Proyecto Profesional de Grado.</div>
+    <div class="wrap">
+      Alcaldía Municipal de San Antonio, Tolima · Prototipo construido para la Fase 1 del Proyecto Profesional de Grado.
+      <a href="/sitemap.xml" style="color:inherit;text-decoration:underline;margin-left:8px;">Mapa del sitio</a>
+    </div>
   </footer>
 </div>
 
@@ -476,6 +511,100 @@
 const SUPABASE_URL = 'https://yjkibftpjvhedbmscbwo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_elPZQ7xh3ManlHtDWJY1DA_1TgwZvgk';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ============================================================
+   Accesibilidad — control de tamaño de texto (Res. 1519/2020, WCAG 2.1 AA)
+============================================================ */
+(function(){
+  const NIVELES = [100, 115, 130, 145];
+  let idx = parseInt(localStorage.getItem('sa_texto_idx') || '0', 10);
+  if (isNaN(idx) || idx < 0 || idx >= NIVELES.length) idx = 0;
+  function aplicar(){
+    document.body.style.zoom = NIVELES[idx] + '%';
+  }
+  window.cambiarTextoTamano = function(dir){
+    idx = (dir === 0) ? 0 : Math.min(NIVELES.length - 1, Math.max(0, idx + dir));
+    localStorage.setItem('sa_texto_idx', idx);
+    aplicar();
+  };
+  aplicar();
+})();
+
+/* ============================================================
+   Horario de atención
+   Martes a viernes: 8:00–12:00 y 2:00pm–5:00pm
+   Sábados: 8:00–12:00 y 1:30pm–4:30pm
+============================================================ */
+const HORARIO_ATENCION = {
+  2: [[8,0, 12,0], [14,0, 17,0]],   // martes
+  3: [[8,0, 12,0], [14,0, 17,0]],   // miércoles
+  4: [[8,0, 12,0], [14,0, 17,0]],   // jueves
+  5: [[8,0, 12,0], [14,0, 17,0]],   // viernes
+  6: [[8,0, 12,0], [13,30, 16,30]], // sábado
+};
+const HORARIO_TEXTO = [
+  'Martes a viernes: 8:00 a.m. – 12:00 p.m. y 2:00 p.m. – 5:00 p.m.',
+  'Sábados: 8:00 a.m. – 12:00 p.m. y 1:30 p.m. – 4:30 p.m.',
+  'Domingos y lunes: no hay atención.'
+];
+
+function _horaBogota(){
+  // Usamos la hora de Bogotá sin importar desde dónde se abra la página.
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+}
+
+function obtenerEstadoHorario(){
+  const ahora = _horaBogota();
+  const dia = ahora.getDay(); // 0=domingo ... 6=sábado
+  const horaDec = ahora.getHours() + ahora.getMinutes()/60;
+  const rangos = HORARIO_ATENCION[dia] || [];
+  const abierto = rangos.some(([h1,m1,h2,m2]) => {
+    const ini = h1 + m1/60, fin = h2 + m2/60;
+    return horaDec >= ini && horaDec < fin;
+  });
+  const fechaISO = ahora.getFullYear() + '-' + String(ahora.getMonth()+1).padStart(2,'0') + '-' + String(ahora.getDate()).padStart(2,'0');
+  return { abierto, fechaISO };
+}
+
+let avisoNoLaboralHoy = null;
+
+async function obtenerAvisoNoLaboral(fechaISO){
+  try{
+    const { data } = await sb.from('avisos_no_laborales').select('*').eq('fecha', fechaISO).limit(1);
+    return (data && data[0]) || null;
+  }catch(e){ return null; }
+}
+
+async function inicializarHorario(){
+  const estado = obtenerEstadoHorario();
+  avisoNoLaboralHoy = await obtenerAvisoNoLaboral(estado.fechaISO);
+  const banner = document.getElementById('horario-banner');
+  const texto = document.getElementById('horario-banner-texto');
+  const abierto = estado.abierto && !avisoNoLaboralHoy;
+  banner.style.display = 'block';
+  banner.className = 'horario-banner ' + (abierto ? 'abierto' : 'cerrado');
+  if(avisoNoLaboralHoy){
+    texto.innerHTML = '🔴 <strong>Hoy no hay atención' + (avisoNoLaboralHoy.motivo ? (': ' + escapeHtml(avisoNoLaboralHoy.motivo)) : '.') + '</strong> Puedes radicar tu solicitud y la atenderemos en el siguiente horario hábil.';
+  } else if(abierto){
+    texto.innerHTML = '🟢 <strong>Estamos en horario de atención.</strong>';
+  } else {
+    texto.innerHTML = '🔴 <strong>En este momento estamos fuera de horario de atención.</strong> Puedes radicar tu solicitud y la atenderemos en el siguiente horario hábil.';
+  }
+}
+
+function mensajeFueraHorario(){
+  if(avisoNoLaboralHoy){
+    return 'Nota: hoy no hay atención' + (avisoNoLaboralHoy.motivo ? (' (' + avisoNoLaboralHoy.motivo + ')') : '') + '. Tu solicitud quedó registrada y la atenderemos en el siguiente horario hábil.';
+  }
+  return 'Nota: en este momento estamos fuera del horario de atención. Tu solicitud quedó registrada y la atenderemos en el siguiente horario hábil.';
+}
+
+function mostrarHorarioCompleto(){
+  openChat();
+  addMsg('Horario de atención:\n' + HORARIO_TEXTO.join('\n'), 'bot');
+}
+
+inicializarHorario();
 
 async function createSolicitud(data){
   // El id se genera en el navegador (ver draft.id) así no necesitamos que el
@@ -641,6 +770,10 @@ function openChat(){
     document.getElementById('chat-launcher').setAttribute('aria-expanded','true');
     if(document.getElementById('chat-body').children.length===0){
       botStart('MENU');
+      const estadoHorarioActual = obtenerEstadoHorario();
+      if(!estadoHorarioActual.abierto || avisoNoLaboralHoy){
+        addMsg(mensajeFueraHorario() + '\n\n' + HORARIO_TEXTO.join('\n'), 'system');
+      }
     }
     const input = document.getElementById('chat-text');
     if(input && document.getElementById('chat-input-row').style.display !== 'none') input.focus();
@@ -954,6 +1087,10 @@ async function enviarSolicitud(){
   lastRadicado = id;
   chatState = 'POST_ENVIO';
   addMsg(`Tu solicitud quedó registrada con el radicado ${id}. Un funcionario del programa de ${draft.oficina} la revisará y te responderá por este medio o por ${draft.contacto}.`, 'bot');
+  const estadoHorarioActual = obtenerEstadoHorario();
+  if(!estadoHorarioActual.abierto || avisoNoLaboralHoy){
+    addMsg(mensajeFueraHorario(), 'bot');
+  }
   const turnoInfo = await obtenerTurno(id);
   if(turnoInfo && turnoInfo.turno > 0){
     addMsg(`Eres el turno ${turnoInfo.turno} de ${turnoInfo.total_en_espera} en espera para ${turnoInfo.programa}.`, 'bot');

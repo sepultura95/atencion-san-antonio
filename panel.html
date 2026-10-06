@@ -77,6 +77,16 @@
   }
   .btn-ghost:hover{background:rgba(255,255,255,.12);}
 
+  .text-ctrl{display:flex;gap:4px;flex:none;}
+  .text-ctrl button{
+    background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.35);color:var(--white);
+    width:30px;height:30px;border-radius:6px;font-weight:700;cursor:pointer;line-height:1;
+  }
+  .text-ctrl button:hover,.text-ctrl button:focus-visible{background:rgba(255,255,255,0.25);}
+  .text-ctrl button:nth-child(1){font-size:11px;}
+  .text-ctrl button:nth-child(2){font-size:13px;}
+  .text-ctrl button:nth-child(3){font-size:15px;}
+
   /* ---------- Login ---------- */
   .login-wrap{max-width:420px;margin:80px auto;padding:0 20px;}
   .login-card{
@@ -232,8 +242,39 @@
     </div>
   </div>
   <div style="display:flex;gap:10px;align-items:center;">
+    <div class="text-ctrl" role="group" aria-label="Tamaño del texto">
+      <button type="button" onclick="cambiarTextoTamano(-1)" aria-label="Disminuir tamaño de texto">A-</button>
+      <button type="button" onclick="cambiarTextoTamano(0)" aria-label="Tamaño de texto normal">A</button>
+      <button type="button" onclick="cambiarTextoTamano(1)" aria-label="Aumentar tamaño de texto">A+</button>
+    </div>
+    <button class="btn-ghost" id="btn-avisos" style="display:none;">📅 Días sin atención</button>
     <button class="btn-presencial" id="btn-presencial" style="display:none;">➕ Atención presencial</button>
     <button class="btn-ghost" id="btn-logout" style="display:none;">Cerrar sesión</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-avisos-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-avisos-title">
+  <div class="modal-card">
+    <h2 id="modal-avisos-title">Días sin atención</h2>
+    <p class="modal-sub">Programa aquí los días en que no se trabajará (festivos, permisos, etc.). Los ciudadanos verán un aviso automático en el portal y en el chat esos días.</p>
+    <div class="modal-row2">
+      <div class="field">
+        <label for="av-fecha">Fecha</label>
+        <input type="date" id="av-fecha">
+      </div>
+      <div class="field">
+        <label for="av-motivo">Motivo (opcional)</label>
+        <input type="text" id="av-motivo" placeholder="Ej: Festivo, capacitación...">
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content:flex-start;">
+      <button class="btn-save" id="btn-avisos-agregar">Agregar</button>
+    </div>
+    <div class="modal-msg" id="av-msg" role="status" aria-live="polite"></div>
+    <div id="avisos-lista" style="margin-top:16px;display:flex;flex-direction:column;gap:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btn-avisos-cerrar">Cerrar</button>
+    </div>
   </div>
 </div>
 
@@ -338,6 +379,24 @@ const SUPABASE_URL = 'https://yjkibftpjvhedbmscbwo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_elPZQ7xh3ManlHtDWJY1DA_1TgwZvgk';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+/* ============================================================
+   Accesibilidad — control de tamaño de texto (Res. 1519/2020, WCAG 2.1 AA)
+============================================================ */
+(function(){
+  const NIVELES = [100, 115, 130, 145];
+  let idx = parseInt(localStorage.getItem('sa_texto_idx') || '0', 10);
+  if (isNaN(idx) || idx < 0 || idx >= NIVELES.length) idx = 0;
+  function aplicar(){
+    document.body.style.zoom = NIVELES[idx] + '%';
+  }
+  window.cambiarTextoTamano = function(dir){
+    idx = (dir === 0) ? 0 : Math.min(NIVELES.length - 1, Math.max(0, idx + dir));
+    localStorage.setItem('sa_texto_idx', idx);
+    aplicar();
+  };
+  aplicar();
+})();
+
 let perfil = null;          // {id, nombre, programa}
 let solicitudes = [];       // cache de lo que la RLS deja ver
 let filtroEstado = 'todas';
@@ -404,6 +463,7 @@ async function afterLogin(){
   document.getElementById('login-wrap').style.display = 'none';
   document.getElementById('btn-logout').style.display = 'inline-block';
   document.getElementById('btn-presencial').style.display = 'inline-block';
+  if(esCoordinador){ document.getElementById('btn-avisos').style.display = 'inline-block'; }
   document.getElementById('staff-shell').classList.add('active');
   document.getElementById('topbar-sub').textContent =
     (perfil.nombre || 'Funcionario') + ' · ' + (esCoordinador ? 'Coordinación (todos los programas)' : misProgramas.join(', '));
@@ -644,6 +704,64 @@ async function guardarRespuesta(s){
 
 function escapeHtml(str){
   return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ============================================================
+   Días sin atención (festivos, permisos) — solo coordinador
+============================================================ */
+document.getElementById('btn-avisos').addEventListener('click', abrirModalAvisos);
+document.getElementById('btn-avisos-cerrar').addEventListener('click', cerrarModalAvisos);
+document.getElementById('btn-avisos-agregar').addEventListener('click', agregarAviso);
+document.getElementById('modal-avisos-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'modal-avisos-overlay') cerrarModalAvisos();
+});
+
+async function abrirModalAvisos(){
+  document.getElementById('av-fecha').value = '';
+  document.getElementById('av-motivo').value = '';
+  document.getElementById('av-msg').textContent = '';
+  await cargarAvisos();
+  document.getElementById('modal-avisos-overlay').classList.add('open');
+}
+
+function cerrarModalAvisos(){
+  document.getElementById('modal-avisos-overlay').classList.remove('open');
+}
+
+async function cargarAvisos(){
+  const hoy = new Date().toISOString().slice(0,10);
+  const { data, error } = await sb.from('avisos_no_laborales').select('*').gte('fecha', hoy).order('fecha', { ascending: true });
+  const wrap = document.getElementById('avisos-lista');
+  if(error){ wrap.innerHTML = '<div class="empty-state">No se pudo cargar la lista.</div>'; return; }
+  if(!data || data.length === 0){ wrap.innerHTML = '<div class="empty-state">No hay días programados.</div>'; return; }
+  wrap.innerHTML = data.map(a => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;">
+      <div>
+        <div style="font-weight:600;font-size:13.5px;">${escapeHtml(a.fecha)}</div>
+        <div style="font-size:12px;color:var(--ink-soft);">${escapeHtml(a.motivo || 'Sin motivo especificado')}</div>
+      </div>
+      <button class="btn-small" data-id="${a.id}" style="background:var(--red-700);color:#fff;" onclick="eliminarAviso('${a.id}')">Eliminar</button>
+    </div>
+  `).join('');
+}
+
+async function agregarAviso(){
+  const fecha = document.getElementById('av-fecha').value;
+  const motivo = document.getElementById('av-motivo').value.trim();
+  const msg = document.getElementById('av-msg');
+  if(!fecha){ msg.textContent = 'Elige una fecha.'; return; }
+  msg.textContent = 'Guardando…';
+  const { error } = await sb.from('avisos_no_laborales').insert({ fecha, motivo: motivo || null });
+  if(error){ msg.textContent = 'Error al guardar: ' + error.message; return; }
+  msg.textContent = 'Agregado.';
+  document.getElementById('av-fecha').value = '';
+  document.getElementById('av-motivo').value = '';
+  await cargarAvisos();
+}
+
+async function eliminarAviso(id){
+  await sb.from('avisos_no_laborales').delete().eq('id', id);
+  await cargarAvisos();
 }
 
 /* ============================================================
