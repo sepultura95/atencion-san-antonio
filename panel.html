@@ -499,7 +499,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-06-1';
+const APP_VERSION = '2026-10-06-2';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -629,6 +629,13 @@ function renderProgramas(listaProgramas){
   });
 }
 
+const ARCHIVO_DIAS = 7;
+function estaArchivada(s){
+  if(s.estado !== 'resuelto' || !s.resuelto_ts) return false;
+  const dias = (Date.now() - new Date(s.resuelto_ts).getTime()) / (1000 * 60 * 60 * 24);
+  return dias > ARCHIVO_DIAS;
+}
+
 function renderFilters(){
   const wrap = document.getElementById('filters');
   const opts = [
@@ -636,6 +643,7 @@ function renderFilters(){
     ['pendiente','Pendientes'],
     ['en_proceso','En proceso'],
     ['resuelto','Resueltas'],
+    ['archivadas',`Archivadas (+${ARCHIVO_DIAS} días)`],
   ];
   wrap.innerHTML = opts.map(([v,l]) =>
     `<button class="chip-filter${filtroEstado===v?' active':''}" data-v="${v}">${l}</button>`
@@ -683,12 +691,17 @@ function calcularTurnos(){
 function renderList(){
   const body = document.getElementById('list-body');
   const items = solicitudes.filter(s => {
-    const pasaEstado = filtroEstado === 'todas' ? true : s.estado === filtroEstado;
     const pasaPrograma = filtroPrograma === 'todas' ? true : s.programa === filtroPrograma;
-    return pasaEstado && pasaPrograma;
+    if(!pasaPrograma) return false;
+    if(filtroEstado === 'archivadas') return estaArchivada(s);
+    const pasaEstado = filtroEstado === 'todas' ? true : s.estado === filtroEstado;
+    return pasaEstado && !estaArchivada(s);
   });
   if(items.length === 0){
-    body.innerHTML = '<div style="padding:16px;font-size:13px;color:var(--ink-soft);">No hay solicitudes en este filtro.</div>';
+    const msg = filtroEstado === 'archivadas'
+      ? 'No hay solicitudes archivadas todavía (se archivan solas a los 7 días de resueltas).'
+      : 'No hay solicitudes en este filtro.';
+    body.innerHTML = `<div style="padding:16px;font-size:13px;color:var(--ink-soft);">${msg}</div>`;
     return;
   }
   body.innerHTML = items.map(s => {
