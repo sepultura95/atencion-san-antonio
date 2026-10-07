@@ -266,6 +266,7 @@
       <button class="btn-ghost" id="btn-apariencia" style="display:none;">🎨 Apariencia</button>
       <button class="btn-ghost" id="btn-avisos" style="display:none;">📅 Días sin atención</button>
       <button class="btn-ghost" id="btn-actividades" style="display:none;">📋 Registrar actividad</button>
+      <button class="btn-ghost" id="btn-exportar-excel" style="display:none;">📊 Exportar a Excel</button>
       <button class="btn-ghost" id="btn-borrar-prueba" style="display:none;color:var(--red-700);border-color:var(--red-700);">🗑️ Borrar datos de prueba</button>
       <button class="btn-presencial" id="btn-presencial" style="display:none;">➕ Atención presencial</button>
       <button class="btn-ghost" id="btn-logout" style="display:none;">Cerrar sesión</button>
@@ -531,6 +532,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script>
 const SUPABASE_URL = 'https://yjkibftpjvhedbmscbwo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_elPZQ7xh3ManlHtDWJY1DA_1TgwZvgk';
@@ -569,7 +571,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-07-6';
+const APP_VERSION = '2026-10-07-8';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -672,6 +674,7 @@ async function afterLogin(){
   document.getElementById('btn-logout').style.display = 'inline-block';
   document.getElementById('btn-presencial').style.display = 'inline-block';
   document.getElementById('btn-actividades').style.display = 'inline-block';
+  document.getElementById('btn-exportar-excel').style.display = 'inline-block';
   if(user.email === 'orejuelaaguiarjhonatan@gmail.com'){
     document.getElementById('btn-borrar-prueba').style.display = 'inline-block';
   }
@@ -1244,6 +1247,262 @@ async function agregarActividad(){
 async function eliminarActividad(id){
   await sb.from('actividades_administrativas').delete().eq('id', id);
   await cargarActividades();
+}
+
+/* ============================================================
+   Exportar a Excel: solicitudes + actividades + encuestas + resumen KPIs
+============================================================ */
+document.getElementById('btn-exportar-excel').addEventListener('click', exportarExcel);
+
+/* ---------- Estilos del libro de Excel (colores institucionales) ---------- */
+function bordeFino(){
+  const linea = { style: 'thin', color: { rgb: 'DDD6C6' } }; // var(--line)
+  return { top: linea, bottom: linea, left: linea, right: linea };
+}
+const ESTILO_HEADER = {
+  font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+  fill: { fgColor: { rgb: '1F4B3F' } }, // var(--green-700)
+  alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+  border: bordeFino(),
+};
+const ESTILO_CELDA = {
+  font: { sz: 11 },
+  alignment: { vertical: 'center', wrapText: false },
+  border: bordeFino(),
+};
+const ESTILO_TITULO_SECCION = {
+  font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } },
+  fill: { fgColor: { rgb: 'C98A2B' } }, // var(--ochre-500)
+  alignment: { vertical: 'center', horizontal: 'left' },
+};
+const ESTILO_SUBHEADER = {
+  font: { bold: true, color: { rgb: '163A2F' }, sz: 11 }, // var(--green-900)
+  fill: { fgColor: { rgb: 'EDE7D6' } }, // tono suave entre --paper y --line
+  alignment: { vertical: 'center', wrapText: true },
+  border: bordeFino(),
+};
+
+function calcularAnchos(filas){
+  const numCols = filas.reduce((max, fila) => Math.max(max, fila.length), 1);
+  const anchos = [];
+  for(let c = 0; c < numCols; c++){
+    let max = 8;
+    filas.forEach(fila => {
+      const val = fila[c];
+      const len = (val === null || val === undefined) ? 0 : String(val).length;
+      if(len > max) max = len;
+    });
+    anchos.push({ wch: Math.min(max + 2, 45) });
+  }
+  return anchos;
+}
+
+/* Convierte una lista de objetos (una fila = un objeto, llaves = encabezados)
+   en una hoja con encabezado verde en negrita, bordes en toda la tabla y
+   columnas ajustadas al contenido. */
+function hojaDeTabla(filas){
+  if(!filas.length){
+    const ws = XLSX.utils.aoa_to_sheet([['Sin datos todavía']]);
+    ws['!cols'] = [{ wch: 24 }];
+    return ws;
+  }
+  const headers = Object.keys(filas[0]);
+  const aoa = [headers, ...filas.map(f => headers.map(h => f[h] ?? ''))];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  for(let c = 0; c < headers.length; c++){
+    const refHeader = XLSX.utils.encode_cell({ r:0, c });
+    if(ws[refHeader]) ws[refHeader].s = ESTILO_HEADER;
+    for(let r = 1; r < aoa.length; r++){
+      const ref = XLSX.utils.encode_cell({ r, c });
+      if(ws[ref]) ws[ref].s = ESTILO_CELDA;
+    }
+  }
+  ws['!cols'] = calcularAnchos(aoa);
+  ws['!rows'] = [{ hpt: 22 }]; // encabezado un poco más alto
+  return ws;
+}
+
+async function exportarExcel(){
+  const btn = document.getElementById('btn-exportar-excel');
+  const textoOriginal = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Generando…';
+  try{
+    const [solRes, actRes, encRes, perfRes] = await Promise.all([
+      sb.from('solicitudes').select('*').order('created_at', { ascending: true }),
+      sb.from('actividades_administrativas').select('*').order('fecha', { ascending: true }),
+      sb.from('encuestas_satisfaccion').select('*').order('created_at', { ascending: true }),
+      sb.from('perfiles_funcionario').select('id, nombre'),
+    ]);
+    const solicitudesData = solRes.data || [];
+    const actividadesData = actRes.data || [];
+    const encuestasData = encRes.data || [];
+    const funcionariosMap = {};
+    (perfRes.data || []).forEach(p => { funcionariosMap[p.id] = p.nombre; });
+    if(!funcionariosMap[perfil.id]) funcionariosMap[perfil.id] = perfil.nombre || 'Yo';
+
+    const wb = XLSX.utils.book_new();
+
+    const solRows = solicitudesData.map(s => {
+      const creado = s.created_at ? new Date(s.created_at) : null;
+      const resuelto = s.resuelto_ts ? new Date(s.resuelto_ts) : null;
+      const dias = (creado && resuelto) ? (resuelto - creado) / (1000*60*60*24) : null;
+      return {
+        'Radicado': s.radicado_legible || '',
+        'Programa': s.programa || '',
+        'Tipo': s.tipo || '',
+        'Canal': s.canal === 'presencial' ? 'Presencial' : 'Chatbot',
+        'Estado': labelEstado(s.estado),
+        'Prioritaria': s.prioritaria ? 'Sí' : 'No',
+        'Nombre ciudadano': s.nombre || '',
+        'Documento': s.documento || '',
+        'Contacto': s.contacto || '',
+        'Caracterización': Array.isArray(s.caracterizacion) ? s.caracterizacion.join(', ') : '',
+        'Atendido por': s.atendido_por || '',
+        'Fecha de radicación': creado ? creado.toLocaleString('es-CO') : '',
+        'Fecha de resolución': resuelto ? resuelto.toLocaleString('es-CO') : '',
+        'Días hasta resolver': dias !== null ? redondear1(dias) : '',
+        'Duración presencial (min)': s.duracion_minutos ?? '',
+      };
+    });
+    XLSX.utils.book_append_sheet(wb, hojaDeTabla(solRows), 'Solicitudes');
+
+    const actRows = actividadesData.map(a => ({
+      'Fecha': a.fecha || '',
+      'Funcionario': funcionariosMap[a.funcionario_id] || a.funcionario_id,
+      'Tipo': a.tipo || '',
+      'Descripción': a.descripcion || '',
+      'Cantidad': a.cantidad ?? '',
+      'Minutos dedicados': a.tiempo_minutos ?? '',
+    }));
+    XLSX.utils.book_append_sheet(wb, hojaDeTabla(actRows), 'Actividades');
+
+    const encRows = encuestasData.map(e => ({
+      'Fecha': e.created_at ? new Date(e.created_at).toLocaleString('es-CO') : '',
+      'Radicado': e.radicado_legible || '',
+      'Tangibles': e.tangibles,
+      'Fiabilidad': e.fiabilidad,
+      'Capacidad de respuesta': e.capacidad_respuesta,
+      'Seguridad': e.seguridad,
+      'Empatía': e.empatia,
+      'Promedio': redondear1((e.tangibles + e.fiabilidad + e.capacidad_respuesta + e.seguridad + e.empatia) / 5),
+      'Comentario': e.comentario || '',
+    }));
+    XLSX.utils.book_append_sheet(wb, hojaDeTabla(encRows), 'Encuestas');
+
+    const wsResumen = construirHojaResumen(solicitudesData, actividadesData, encuestasData, funcionariosMap);
+    XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen KPIs');
+
+    const fechaArchivo = new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb, `reporte_programas_sociales_${fechaArchivo}.xlsx`);
+  }catch(e){
+    console.error(e);
+    alert('No se pudo generar el Excel. Revisa la consola del navegador (F12) para más detalles.');
+  }
+  btn.disabled = false;
+  btn.textContent = textoOriginal;
+}
+
+function redondear1(n){ return Math.round(n * 10) / 10; }
+function promedioNum(arr){
+  const nums = arr.filter(n => typeof n === 'number' && !isNaN(n));
+  return nums.length ? nums.reduce((a,b)=>a+b,0) / nums.length : null;
+}
+
+function construirHojaResumen(solicitudes, actividades, encuestas, funcionariosMap){
+  const totalRecibidas = solicitudes.length;
+  const resueltas = solicitudes.filter(s => s.estado === 'resuelto');
+  const pendientes = solicitudes.filter(s => s.estado === 'pendiente').length;
+  const enProceso = solicitudes.filter(s => s.estado === 'en_proceso').length;
+  const eficaciaGlobal = totalRecibidas ? (resueltas.length / totalRecibidas * 100) : 0;
+
+  const diasResolucion = resueltas
+    .map(s => (s.created_at && s.resuelto_ts) ? (new Date(s.resuelto_ts) - new Date(s.created_at)) / (1000*60*60*24) : null)
+    .filter(d => d !== null);
+  const tiempoPromedioDias = promedioNum(diasResolucion);
+
+  const satisfaccionPorEncuesta = encuestas.map(e => (e.tangibles + e.fiabilidad + e.capacidad_respuesta + e.seguridad + e.empatia) / 5);
+  const satisfaccionGeneral = promedioNum(satisfaccionPorEncuesta);
+
+  const totalActividades = actividades.reduce((sum,a) => sum + (a.cantidad || 1), 0);
+  const totalMinutosActividades = actividades.reduce((sum,a) => sum + (a.tiempo_minutos || 0), 0);
+
+  const programas = [...new Set(solicitudes.map(s => s.programa).filter(Boolean))];
+  const filasPrograma = programas.map(p => {
+    const deEsePrograma = solicitudes.filter(s => s.programa === p);
+    const resueltasPrograma = deEsePrograma.filter(s => s.estado === 'resuelto');
+    const eficacia = deEsePrograma.length ? (resueltasPrograma.length / deEsePrograma.length * 100) : 0;
+    const dias = resueltasPrograma
+      .map(s => (s.created_at && s.resuelto_ts) ? (new Date(s.resuelto_ts) - new Date(s.created_at)) / (1000*60*60*24) : null)
+      .filter(d => d !== null);
+    const tiempoProm = promedioNum(dias);
+    const idsDelPrograma = new Set(deEsePrograma.map(s => s.id));
+    const encuestasPrograma = encuestas.filter(e => idsDelPrograma.has(e.solicitud_id));
+    const satProm = promedioNum(encuestasPrograma.map(e => (e.tangibles+e.fiabilidad+e.capacidad_respuesta+e.seguridad+e.empatia)/5));
+    return [p, deEsePrograma.length, resueltasPrograma.length, redondear1(eficacia) + '%', tiempoProm !== null ? redondear1(tiempoProm) + ' días' : '—', satProm !== null ? redondear1(satProm) + '/5' : '—'];
+  });
+
+  const nombresFuncionarios = [...new Set([
+    ...solicitudes.map(s => s.atendido_por).filter(Boolean),
+    ...actividades.map(a => funcionariosMap[a.funcionario_id]).filter(Boolean),
+  ])];
+  const filasFuncionario = nombresFuncionarios.map(nombre => {
+    const solResueltasFunc = solicitudes.filter(s => s.atendido_por === nombre && s.estado === 'resuelto').length;
+    const actFunc = actividades.filter(a => funcionariosMap[a.funcionario_id] === nombre);
+    const totalActFunc = actFunc.reduce((sum,a) => sum + (a.cantidad || 1), 0);
+    const minutosActFunc = actFunc.reduce((sum,a) => sum + (a.tiempo_minutos || 0), 0);
+    return [nombre, solResueltasFunc, totalActFunc, minutosActFunc, solResueltasFunc + totalActFunc];
+  });
+
+  const filasDescriptor = [
+    { tipo:'titulo', valores: ['Resumen general'] },
+    { tipo:'data', valores: ['Total solicitudes recibidas', totalRecibidas] },
+    { tipo:'data', valores: ['Resueltas', resueltas.length] },
+    { tipo:'data', valores: ['Pendientes', pendientes] },
+    { tipo:'data', valores: ['En proceso', enProceso] },
+    { tipo:'data', valores: ['Eficacia global (% resueltas sobre recibidas)', redondear1(eficaciaGlobal) + '%'] },
+    { tipo:'data', valores: ['Tiempo promedio de resolución', tiempoPromedioDias !== null ? redondear1(tiempoPromedioDias) + ' días' : '—'] },
+    { tipo:'data', valores: ['Satisfacción promedio general (sobre 5)', satisfaccionGeneral !== null ? redondear1(satisfaccionGeneral) : '—'] },
+    { tipo:'data', valores: ['Total actividades administrativas registradas', totalActividades] },
+    { tipo:'data', valores: ['Total minutos en actividades administrativas', totalMinutosActividades] },
+    { tipo:'vacio', valores: [] },
+    { tipo:'titulo', valores: ['Por programa'] },
+    { tipo:'header', valores: ['Programa', 'Recibidas', 'Resueltas', 'Eficacia', 'Tiempo promedio de resolución', 'Satisfacción promedio'] },
+    ...filasPrograma.map(f => ({ tipo:'data', valores: f })),
+    { tipo:'vacio', valores: [] },
+    { tipo:'titulo', valores: ['Por funcionario (productividad = solicitudes resueltas + actividades)'] },
+    { tipo:'header', valores: ['Funcionario', 'Solicitudes resueltas', 'Actividades (cantidad)', 'Minutos en actividades', 'Productividad'] },
+    ...filasFuncionario.map(f => ({ tipo:'data', valores: f })),
+    { tipo:'vacio', valores: [] },
+    { tipo:'data', valores: ['Generado el', new Date().toLocaleString('es-CO')] },
+  ];
+
+  const aoa = filasDescriptor.map(f => f.valores);
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const maxCols = filasDescriptor.reduce((max, f) => Math.max(max, f.valores.length), 1);
+
+  ws['!merges'] = [];
+  filasDescriptor.forEach((f, r) => {
+    if(f.tipo === 'titulo'){
+      const ref = XLSX.utils.encode_cell({ r, c:0 });
+      if(ws[ref]) ws[ref].s = ESTILO_TITULO_SECCION;
+      ws['!merges'].push({ s:{ r, c:0 }, e:{ r, c: maxCols - 1 } });
+    } else if(f.tipo === 'header'){
+      f.valores.forEach((_, c) => {
+        const ref = XLSX.utils.encode_cell({ r, c });
+        if(ws[ref]) ws[ref].s = ESTILO_SUBHEADER;
+      });
+    } else if(f.tipo === 'data'){
+      f.valores.forEach((_, c) => {
+        const ref = XLSX.utils.encode_cell({ r, c });
+        if(ws[ref]) ws[ref].s = ESTILO_CELDA;
+      });
+    }
+  });
+
+  const filasParaAnchos = filasDescriptor.filter(f => f.tipo !== 'titulo').map(f => f.valores);
+  ws['!cols'] = calcularAnchos(filasParaAnchos.length ? filasParaAnchos : aoa);
+  return ws;
 }
 
 /* ============================================================
