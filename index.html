@@ -540,7 +540,7 @@
     <button id="chat-send" onclick="submitTextInput()">Enviar</button>
   </div>
 </div>
-<input type="file" id="chat-file" accept="application/pdf" style="display:none;" aria-hidden="true">
+<input type="file" id="chat-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="display:none;" aria-hidden="true">
 <div class="sr-only" role="status" aria-live="polite" id="chat-file-status"></div>
 
 <div class="update-toast" id="update-toast" role="status" aria-live="polite">
@@ -707,7 +707,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-07-18';
+const APP_VERSION = '2026-10-07-19';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -776,18 +776,21 @@ async function createSolicitud(data){
   return id;
 }
 
-/* ---------- Adjuntos PDF (Supabase Storage, bucket "adjuntos") ---------- */
+/* ---------- Adjuntos (Supabase Storage, bucket "adjuntos") ---------- */
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
+const TIPOS_ADJUNTO_PERMITIDOS = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','image/jpeg','image/png'];
+const EXTS_ADJUNTO_PERMITIDOS = ['pdf','doc','docx','xls','xlsx','jpg','jpeg','png'];
 
 async function subirPdf(file, carpeta){
-  if(file.type !== 'application/pdf'){
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  if(!EXTS_ADJUNTO_PERMITIDOS.includes(ext) && !TIPOS_ADJUNTO_PERMITIDOS.includes(file.type)){
     throw new Error('TIPO');
   }
   if(file.size > MAX_PDF_BYTES){
     throw new Error('TAMANO');
   }
   const path = `${carpeta}/${Date.now()}-${file.name}`.replace(/\s+/g,'_');
-  const { error } = await sb.storage.from('adjuntos').upload(path, file, { contentType:'application/pdf' });
+  const { error } = await sb.storage.from('adjuntos').upload(path, file, { contentType: file.type || undefined });
   if(error){ console.error(error); throw new Error('SUBIDA'); }
   const { data } = sb.storage.from('adjuntos').getPublicUrl(path);
   return { url: data.publicUrl, nombre: file.name };
@@ -1360,8 +1363,8 @@ function goRadicarDescripcion(){
 function goRadicarAdjunto(){
   chatState = 'RADICAR_ADJUNTO';
   hideTextInput();
-  addMsg('¿Quieres adjuntar un documento en PDF (máximo 5 MB)? Por ejemplo una cédula escaneada o un soporte. Así evitamos tener que pedírtelo por WhatsApp.', 'bot');
-  setChips([{label:'📎 Adjuntar PDF', value:'ADJUNTAR'},{label:'Continuar sin adjuntar', value:'SIN_ADJUNTO'}]);
+  addMsg('¿Quieres adjuntar un documento (PDF, Word, Excel o imagen, máximo 5 MB)? Por ejemplo una cédula escaneada o un soporte. Así evitamos tener que pedírtelo por WhatsApp.', 'bot');
+  setChips([{label:'📎 Adjuntar archivo', value:'ADJUNTAR'},{label:'Continuar sin adjuntar', value:'SIN_ADJUNTO'}]);
 }
 
 function goConfirmar(){
@@ -1523,13 +1526,13 @@ chatFileInput.addEventListener('change', async () => {
   }catch(e){
     estado.textContent = 'Error al subir el documento.';
     let msg = 'No pude subir el documento. Intenta de nuevo.';
-    if(e.message === 'TIPO') msg = 'Solo se admiten archivos en formato PDF.';
+    if(e.message === 'TIPO') msg = 'Solo se admiten archivos PDF, Word, Excel o imágenes (jpg, png).';
     if(e.message === 'TAMANO') msg = 'El archivo supera el máximo de 5 MB.';
     addMsg(msg, 'bot');
     if(fileUploadContext === 'CONSULTA'){
       setChips([{label:'Intentar de nuevo', value:'REINTENTAR_ADJUNTO'},{label:'Volver al menú', value:'MENU'}]);
     } else {
-      setChips([{label:'📎 Adjuntar PDF', value:'ADJUNTAR'},{label:'Continuar sin adjuntar', value:'SIN_ADJUNTO'}]);
+      setChips([{label:'📎 Adjuntar archivo', value:'ADJUNTAR'},{label:'Continuar sin adjuntar', value:'SIN_ADJUNTO'}]);
     }
   }
 });

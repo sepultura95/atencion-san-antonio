@@ -604,7 +604,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-07-18';
+const APP_VERSION = '2026-10-07-19';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -749,7 +749,7 @@ function suscribirCambiosSolicitudes(){
 function renderProgramas(listaProgramas){
   const wrap = document.getElementById('programas');
   const opts = [['todas','Todos mis programas'], ...listaProgramas.map(p => [p,p])];
-  wrap.innerHTML = '<p class="programas-label">Filtrar por programa</p><div class="programas-grid">' +
+  wrap.innerHTML = '<div class="programas-grid">' +
     opts.map(([v,l]) =>
       `<button class="chip-programa${filtroPrograma===v?' active':''}" data-v="${escapeHtml(v)}">${escapeHtml(l)}</button>`
     ).join('') +
@@ -888,8 +888,8 @@ function renderDetail(){
       <label for="reply-text" class="sr-only">Respuesta para el ciudadano</label>
       <textarea id="reply-text" placeholder="Escribe la respuesta para el ciudadano..."></textarea>
       <div class="attach-row">
-        <label for="reply-file">📎 Adjuntar PDF (máx. 5 MB):</label>
-        <input type="file" id="reply-file" accept="application/pdf">
+        <label for="reply-file">📎 Adjuntar archivo (PDF, Word, Excel o imagen, máx. 5 MB):</label>
+        <input type="file" id="reply-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
         <span class="sel-name" id="reply-file-name"></span>
       </div>
       <div class="reply-row">
@@ -918,11 +918,15 @@ function renderDetail(){
 
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
 
+const TIPOS_ADJUNTO_PERMITIDOS = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','image/jpeg','image/png'];
+const EXTS_ADJUNTO_PERMITIDOS = ['pdf','doc','docx','xls','xlsx','jpg','jpeg','png'];
+
 async function subirPdfFuncionario(file, solicitudId){
-  if(file.type !== 'application/pdf') throw new Error('TIPO');
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  if(!EXTS_ADJUNTO_PERMITIDOS.includes(ext) && !TIPOS_ADJUNTO_PERMITIDOS.includes(file.type)) throw new Error('TIPO');
   if(file.size > MAX_PDF_BYTES) throw new Error('TAMANO');
   const path = `${solicitudId}/${Date.now()}-${file.name}`.replace(/\s+/g,'_');
-  const { error } = await sb.storage.from('adjuntos').upload(path, file, { contentType:'application/pdf' });
+  const { error } = await sb.storage.from('adjuntos').upload(path, file, { contentType: file.type || undefined });
   if(error){ console.error(error); throw new Error('SUBIDA'); }
   const { data } = sb.storage.from('adjuntos').getPublicUrl(path);
   return { url: data.publicUrl, nombre: file.name };
@@ -968,7 +972,7 @@ async function guardarRespuesta(s){
     }catch(e){
       btn.disabled = false; btn.textContent = 'Guardar';
       let msg = 'No se pudo subir el documento.';
-      if(e.message === 'TIPO') msg = 'Solo se admiten archivos PDF.';
+      if(e.message === 'TIPO') msg = 'Solo se admiten archivos PDF, Word, Excel o imágenes (jpg, png).';
       if(e.message === 'TAMANO') msg = 'El archivo supera 5 MB.';
       saveMsg.textContent = msg;
       saveMsg.style.color = 'var(--red-700)';
