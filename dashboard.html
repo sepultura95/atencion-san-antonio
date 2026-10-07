@@ -152,7 +152,7 @@
   .bar-label{width:190px;font-size:13px;color:var(--text-secondary);flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .bar-track{flex:1;background:var(--track);border-radius:6px;height:14px;overflow:hidden;}
   .bar-fill{height:100%;border-radius:6px;transition:width .5s ease;}
-  .bar-value{width:160px;text-align:right;font-size:12px;color:var(--text-muted);flex:none;font-family:'IBM Plex Mono',monospace;}
+  .bar-value{width:200px;text-align:right;font-size:12px;color:var(--text-muted);flex:none;font-family:'IBM Plex Mono',monospace;line-height:1.5;}
 
   .resumen-texto{
     background:var(--bg-card-2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;
@@ -682,6 +682,26 @@ function construirListaBarras(filas, { selectorDestino } = {}){
   }).join('');
 }
 
+/* Variante para listas de volumen (productividad, actividades): no hay
+   "bueno/malo" universal, así que la barra es azul y su largo es relativo
+   al valor más alto de la lista, no un porcentaje. */
+function construirListaProductividad(filas, { selectorDestino } = {}){
+  if(!filas.length) return '<p class="vacio-aviso">No hay datos suficientes todavía.</p>';
+  const max = Math.max(1, ...filas.map(f => f.valor));
+  return filas.map(f => {
+    const ancho = f.valor > 0 ? Math.max(4, Math.round((f.valor / max) * 100)) : 2;
+    const drill = (selectorDestino && f.valorAmbito)
+      ? `<a class="drill-link" href="#" onclick="irAAmbito('${f.valorAmbito.replace(/'/g,"\\'")}');return false;">Ver detalle</a>`
+      : '';
+    return `
+      <div class="bar-row">
+        <div class="bar-label">${f.etiqueta}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${ancho}%;background:var(--accent);"></div></div>
+        <div class="bar-value">${f.detalle}${drill}</div>
+      </div>`;
+  }).join('');
+}
+
 function irAAmbito(valor){
   const sel = document.getElementById('sel-ambito');
   if([...sel.options].some(o => o.value === valor)){
@@ -733,7 +753,9 @@ function renderDashboard(){
     html += `</div>`;
   }
 
-  if(!ambito.esIndividual){
+  if(!ambito.esIndividual && ambito.esPrograma){
+    // Dentro de un programa concreto, las actividades administrativas no aplican
+    // (no están ligadas a un programa), así que mostramos solo solicitudes.
     const nombresVisibles = [...new Set(ambito.solicitudesScope.map(s => s.atendido_por).filter(Boolean))];
     const filasFunc = nombresVisibles.map(n => {
       const deEseFunc = ambito.solicitudesScope.filter(s => s.atendido_por === n);
@@ -748,8 +770,36 @@ function renderDashboard(){
     }).sort((a,b) => (b.eficacia ?? 0) - (a.eficacia ?? 0));
     if(filasFunc.length){
       html += `<div class="seccion"><h2>Desempeño por funcionario</h2>`;
-      html += `<p class="seccion-sub">Solicitudes resueltas sobre el total atendido por cada funcionario, en este ámbito.</p>`;
+      html += `<p class="seccion-sub">Solicitudes resueltas sobre el total atendido por cada funcionario, en este programa.</p>`;
       html += construirListaBarras(filasFunc, { selectorDestino: esCoordinador });
+      html += `</div>`;
+    }
+  }else if(!ambito.esIndividual){
+    // Vista general: mostramos TODOS los perfiles creados (aunque todavía no
+    // hayan atendido solicitudes), combinando solicitudes resueltas +
+    // actividades administrativas, para que se vea quién registró qué.
+    const totalActEquipo = ambito.actividadesScope.reduce((s,a)=>s+(a.cantidad||1),0);
+    const totalMinEquipo = ambito.actividadesScope.reduce((s,a)=>s+(a.tiempo_minutos||0),0);
+    const idsConPerfil = Object.keys(funcionariosMap);
+    const filasFunc = idsConPerfil.map(id => {
+      const nombre = funcionariosMap[id];
+      const deEseFunc = ambito.solicitudesScope.filter(s => s.atendido_por === nombre);
+      const resueltasF = deEseFunc.filter(s => s.estado === 'resuelto').length;
+      const actFunc = ambito.actividadesScope.filter(a => a.funcionario_id === id);
+      const cantActFunc = actFunc.reduce((s,a)=>s+(a.cantidad||1),0);
+      const minActFunc = actFunc.reduce((s,a)=>s+(a.tiempo_minutos||0),0);
+      const productividad = resueltasF + cantActFunc;
+      return {
+        etiqueta: nombre,
+        valor: productividad,
+        detalle: `${resueltasF} resueltas · ${cantActFunc} activ.${minActFunc ? ' (' + minActFunc + ' min)' : ''}`,
+        valorAmbito: esCoordinador ? ('funcionario:' + nombre) : null,
+      };
+    }).sort((a,b) => b.valor - a.valor);
+    if(filasFunc.length){
+      html += `<div class="seccion"><h2>Desempeño por funcionario</h2>`;
+      html += `<p class="seccion-sub">Productividad = solicitudes resueltas + actividades administrativas. Equipo: ${totalActEquipo} actividades registradas${totalMinEquipo ? ' · ' + totalMinEquipo + ' min' : ''}.</p>`;
+      html += construirListaProductividad(filasFunc, { selectorDestino: esCoordinador });
       html += `</div>`;
     }
   }
