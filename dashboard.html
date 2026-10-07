@@ -350,6 +350,7 @@ function poblarSelectorAmbito(){
   if(esCoordinador){
     opt('general', '📊 General (todos los programas)');
     opt('yo', '🙋 Mi desempeño (' + (perfil.nombre || 'yo') + ')');
+    opt('actividades', '📋 Actividades administrativas (todo el equipo)');
     const ogP = document.createElement('optgroup'); ogP.label = 'Por programa';
     PROGRAMAS.forEach(p => { const o = document.createElement('option'); o.value = 'programa:' + p; o.textContent = p; ogP.appendChild(o); });
     sel.appendChild(ogP);
@@ -362,6 +363,7 @@ function poblarSelectorAmbito(){
   }else{
     opt('yo', '🙋 Mi desempeño');
     opt('general', '📊 General de ' + (perfil.misProgramas.length > 1 ? 'mis programas' : ('mi programa: ' + perfil.misProgramas[0])));
+    opt('actividades', '📋 Mis actividades administrativas');
     if(perfil.misProgramas.length > 1){
       const ogP = document.createElement('optgroup'); ogP.label = 'Por programa';
       perfil.misProgramas.forEach(p => { const o = document.createElement('option'); o.value = 'programa:' + p; o.textContent = p; ogP.appendChild(o); });
@@ -715,6 +717,63 @@ function construirSeccionActividades(actividadesScope){
 }
 
 /* ============================================================
+   Vista dedicada: Actividades administrativas (con selector de funcionario)
+============================================================ */
+function renderVistaActividades(){
+  // Lo que ve cada quien ya viene filtrado por los permisos de la base de
+  // datos: un funcionario normal solo recibe sus propias actividades; el
+  // coordinador recibe las de todo el equipo.
+  const idsConActividad = [...new Set(actividadesData.map(a => a.funcionario_id))];
+  const nombresConActividad = idsConActividad.map(id => funcionariosMap[id] || id).filter(Boolean).sort((a,b)=>a.localeCompare(b));
+
+  let selectorHtml = '';
+  if(esCoordinador && nombresConActividad.length > 1){
+    selectorHtml = `
+      <div style="margin-bottom:16px;">
+        <label for="sel-func-actividades" style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Filtrar por funcionario</label>
+        <select id="sel-func-actividades" style="padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:var(--bg-card-2);color:var(--text-primary);min-width:240px;">
+          <option value="todos">Todos</option>
+          ${nombresConActividad.map(n => `<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('')}
+        </select>
+      </div>`;
+  }
+
+  const html = `
+    <div class="seccion">
+      <h2>Actividades administrativas</h2>
+      <p class="seccion-sub">Actas, oficios, foliación, resoluciones, decretos, comités, visitas y demás, registradas por fuera del chatbot.${esCoordinador ? '' : ' (Solo ves las tuyas.)'}</p>
+      ${selectorHtml}
+      <div id="actividades-vista-contenido"></div>
+    </div>
+    ${esCoordinador && nombresConActividad.length > 1 ? `
+    <div class="seccion" id="actividades-por-funcionario-wrap">
+      <h2>Por funcionario</h2>
+      <p class="seccion-sub">Cantidad de actividades y minutos dedicados por cada persona.</p>
+      ${construirListaProductividad(nombresConActividad.map(n => {
+        const id = idsConActividad.find(i => (funcionariosMap[i]||i) === n);
+        const deEse = actividadesData.filter(a => a.funcionario_id === id);
+        const cant = deEse.reduce((s,a)=>s+(a.cantidad||1),0);
+        const min = deEse.reduce((s,a)=>s+(a.tiempo_minutos||0),0);
+        return { etiqueta: n, valor: cant, detalle: `${cant} activ.${min ? ' · ' + min + ' min' : ''}` };
+      }))}
+    </div>` : ''}
+  `;
+  document.getElementById('dash-content').innerHTML = html;
+
+  const contenido = document.getElementById('actividades-vista-contenido');
+  contenido.innerHTML = construirSeccionActividades(actividadesData);
+
+  const selFunc = document.getElementById('sel-func-actividades');
+  if(selFunc){
+    selFunc.addEventListener('change', () => {
+      const val = selFunc.value;
+      const filtradas = val === 'todos' ? actividadesData : actividadesData.filter(a => (funcionariosMap[a.funcionario_id] || a.funcionario_id) === val);
+      contenido.innerHTML = construirSeccionActividades(filtradas);
+    });
+  }
+}
+
+/* ============================================================
    Listas tipo barra: por programa / por funcionario
 ============================================================ */
 function construirListaBarras(filas, { selectorDestino } = {}){
@@ -767,6 +826,11 @@ function irAAmbito(valor){
    Render principal
 ============================================================ */
 function renderDashboard(){
+  const sel = document.getElementById('sel-ambito');
+  if(sel.value === 'actividades'){
+    renderVistaActividades();
+    return;
+  }
   const ambito = obtenerAmbito();
   const kpis = calcularKPIs(ambito.solicitudesScope, ambito.encuestasScope);
   const bench = (ambito.esIndividual) ? calcularBenchProductividad() : null;
