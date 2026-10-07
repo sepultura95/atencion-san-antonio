@@ -641,7 +641,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-07-24';
+const APP_VERSION = '2026-10-07-25';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -1231,8 +1231,8 @@ async function cargarListaImagenesPanel(){
   wrap.innerHTML = destImagenesActual.map((img, i) => `
     <div style="border:1px solid var(--line);border-radius:8px;padding:10px;" data-img-id="${img.id}">
       <div style="display:flex;gap:10px;">
-        <div style="width:72px;height:54px;border-radius:4px;overflow:hidden;flex:none;background:var(--paper-dim);">
-          <img src="${img.url}" style="width:100%;height:100%;object-fit:cover;object-position:${img.pos_x}% ${img.pos_y}%;transform:scale(${img.zoom/100});">
+        <div class="dest-img-preview-wrap" style="width:72px;height:54px;border-radius:4px;overflow:hidden;flex:none;background:var(--paper-dim);">
+          <img class="dest-img-preview" src="${img.url}" style="width:100%;height:100%;object-fit:contain;object-position:${img.pos_x}% ${img.pos_y}%;transform:scale(${img.zoom/100});">
         </div>
         <div style="flex:1;min-width:0;">
           <input type="text" class="dest-img-titulo" placeholder="Título (opcional)" value="${escapeHtml(img.titulo || '')}" style="width:100%;padding:6px;border:1px solid var(--line);border-radius:5px;font-size:12.5px;margin-bottom:4px;">
@@ -1244,8 +1244,8 @@ async function cargarListaImagenesPanel(){
         <input type="range" class="dest-img-posx" min="0" max="100" value="${img.pos_x}" style="width:100%;">
         <label style="font-size:10.5px;color:var(--ink-soft);">Mover — vertical</label>
         <input type="range" class="dest-img-posy" min="0" max="100" value="${img.pos_y}" style="width:100%;">
-        <label style="font-size:10.5px;color:var(--ink-soft);">Tamaño (acercar / alejar)</label>
-        <input type="range" class="dest-img-zoom" min="100" max="250" value="${img.zoom}" style="width:100%;">
+        <label style="font-size:10.5px;color:var(--ink-soft);">Tamaño (alejar para verla completa / acercar para recortarla)</label>
+        <input type="range" class="dest-img-zoom" min="40" max="250" value="${img.zoom}" style="width:100%;">
       </div>
       <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn-small dest-img-guardar" style="background:var(--ochre-600);color:#fff;">Guardar ajustes</button>
@@ -1264,6 +1264,18 @@ async function cargarListaImagenesPanel(){
     if(subirBtn) subirBtn.addEventListener('click', () => moverOrdenImagenDestacada(id, -1));
     const bajarBtn = card.querySelector('.dest-img-bajar-orden');
     if(bajarBtn) bajarBtn.addEventListener('click', () => moverOrdenImagenDestacada(id, 1));
+
+    const preview = card.querySelector('.dest-img-preview');
+    const actualizarPreview = () => {
+      const px = card.querySelector('.dest-img-posx').value;
+      const py = card.querySelector('.dest-img-posy').value;
+      const z = card.querySelector('.dest-img-zoom').value;
+      preview.style.objectPosition = px + '% ' + py + '%';
+      preview.style.transform = `scale(${z/100})`;
+    };
+    ['dest-img-posx','dest-img-posy','dest-img-zoom'].forEach(cls => {
+      card.querySelector('.' + cls).addEventListener('input', actualizarPreview);
+    });
   });
 }
 

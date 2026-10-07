@@ -155,6 +155,7 @@
   .hero-feature img, .hero-feature video, .hero-feature iframe{
     width:100%;aspect-ratio:4/3;object-fit:cover;display:block;border:0;background:var(--paper-dim);
   }
+  .hero-feature img{object-fit:contain;transform-origin:center center;}
   .hero-feature .hf-dots{position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:6px;}
   .hero-feature .hf-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.6);}
   .hero-feature .hf-dot.active{background:#fff;}
@@ -854,7 +855,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-07-24';
+const APP_VERSION = '2026-10-07-25';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
