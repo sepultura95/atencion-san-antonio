@@ -78,6 +78,18 @@
   }
   .btn-ghost:hover{background:rgba(255,255,255,.12);}
 
+  .update-toast{
+    position:fixed;left:14px;right:14px;bottom:14px;max-width:420px;margin:0 auto;
+    background:var(--green-900);color:var(--white);border-radius:10px;padding:14px 16px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.25);z-index:200;display:none;
+    font-size:13.5px;line-height:1.4;
+  }
+  .update-toast.show{display:block;}
+  .update-toast .ut-actions{display:flex;gap:10px;margin-top:10px;}
+  .update-toast button{border:none;border-radius:6px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;}
+  .update-toast .ut-reload{background:var(--ochre-500);color:var(--green-900);}
+  .update-toast .ut-dismiss{background:rgba(255,255,255,0.15);color:var(--white);}
+
   .text-ctrl{display:flex;gap:4px;flex:none;}
   .text-ctrl button{
     background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.35);color:var(--white);
@@ -440,6 +452,14 @@
   </div>
 </div>
 
+<div class="update-toast" id="update-toast" role="status" aria-live="polite">
+  Hay una versión más reciente del panel.
+  <div class="ut-actions">
+    <button class="ut-reload" onclick="location.reload()">Actualizar ahora</button>
+    <button class="ut-dismiss" onclick="document.getElementById('update-toast').classList.remove('show')">Más tarde</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = 'https://yjkibftpjvhedbmscbwo.supabase.co';
@@ -475,6 +495,27 @@ async function inicializarApariencia(){
   }catch(e){ /* sin configuración todavía: queda el diseño por defecto */ }
 }
 inicializarApariencia();
+
+/* ============================================================
+   Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
+============================================================ */
+const APP_VERSION = '2026-10-06-1';
+let avisoVersionMostrado = false;
+
+async function verificarVersionNueva(){
+  if(avisoVersionMostrado) return;
+  try{
+    const res = await fetch('/version.json?_=' + Date.now(), { cache: 'no-store' });
+    if(!res.ok) return;
+    const data = await res.json();
+    if(data.version && data.version !== APP_VERSION){
+      avisoVersionMostrado = true;
+      document.getElementById('update-toast').classList.add('show');
+    }
+  }catch(e){ /* si falla, simplemente no mostramos el aviso */ }
+}
+setTimeout(verificarVersionNueva, 15000);
+setInterval(verificarVersionNueva, 5 * 60 * 1000);
 
 /* ============================================================
    Accesibilidad — control de tamaño de texto (Res. 1519/2020, WCAG 2.1 AA)

@@ -215,6 +215,18 @@
     display:inline-block;background:var(--ochre-100);color:var(--green-900);font-weight:700;
     padding:4px 10px;border-radius:6px;font-size:14.5px;letter-spacing:0.03em;margin:4px 0;
   }
+
+  .update-toast{
+    position:fixed;left:14px;right:14px;bottom:14px;max-width:420px;margin:0 auto;
+    background:var(--green-900);color:var(--white);border-radius:10px;padding:14px 16px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.25);z-index:200;display:none;
+    font-size:13.5px;line-height:1.4;
+  }
+  .update-toast.show{display:block;}
+  .update-toast .ut-actions{display:flex;gap:10px;margin-top:10px;}
+  .update-toast button{border:none;border-radius:6px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;}
+  .update-toast .ut-reload{background:var(--ochre-500);color:var(--green-900);}
+  .update-toast .ut-dismiss{background:rgba(255,255,255,0.15);color:var(--white);}
   .msg.bot{background:var(--white);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px;}
   .msg.user{background:var(--green-700);color:var(--white);align-self:flex-end;border-bottom-right-radius:4px;}
   .msg.system{align-self:center;background:var(--ochre-100);color:var(--green-900);font-size:12px;border-radius:999px;padding:5px 12px;}
@@ -513,6 +525,14 @@
 <input type="file" id="chat-file" accept="application/pdf" style="display:none;" aria-hidden="true">
 <div class="sr-only" role="status" aria-live="polite" id="chat-file-status"></div>
 
+<div class="update-toast" id="update-toast" role="status" aria-live="polite">
+  Hay una versión más reciente de esta página.
+  <div class="ut-actions">
+    <button class="ut-reload" onclick="location.reload()">Actualizar ahora</button>
+    <button class="ut-dismiss" onclick="document.getElementById('update-toast').classList.remove('show')">Más tarde</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ============================================================
@@ -623,16 +643,19 @@ async function inicializarApariencia(){
   try{
     const { data } = await sb.from('configuracion_sitio').select('*').eq('id', 1).single();
     if(!data) return;
+    const seal = document.getElementById('seal');
     if(data.logo_url){
-      const seal = document.getElementById('seal');
       const px = data.logo_pos_x ?? 50, py = data.logo_pos_y ?? 50;
       const lz = (data.logo_zoom ?? 100) / 100;
       seal.innerHTML = `<img src="${data.logo_url}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima" style="object-position:${px}% ${py}%;transform:scale(${lz});">`;
       seal.removeAttribute('aria-hidden');
+    } else if(seal.querySelector('img')){
+      seal.innerHTML = 'SA';
+      seal.setAttribute('aria-hidden', 'true');
     }
+    const bgImg = document.getElementById('topbar-bg-img');
+    const overlay = document.getElementById('topbar-bg-overlay');
     if(data.header_fondo_url){
-      const bgImg = document.getElementById('topbar-bg-img');
-      const overlay = document.getElementById('topbar-bg-overlay');
       const fx = data.header_fondo_pos_x ?? 50, fy = data.header_fondo_pos_y ?? 50;
       const fz = (data.header_fondo_zoom ?? 100) / 100;
       const ov = (data.header_fondo_overlay ?? 55) / 100;
@@ -642,10 +665,46 @@ async function inicializarApariencia(){
       bgImg.style.transform = `scale(${fz})`;
       overlay.style.background = `rgba(31,75,63,${ov})`;
       overlay.style.display = 'block';
+    } else if(bgImg.style.display !== 'none'){
+      bgImg.style.display = 'none';
+      overlay.style.display = 'none';
     }
   }catch(e){ /* si no hay configuración todavía, se queda con el diseño por defecto */ }
 }
 inicializarApariencia();
+
+/* ============================================================
+   Actualización automática en segundo plano — para que un usuario
+   que deja la página abierta (sin recargar) vea horarios, avisos
+   y apariencia al día, sin perder lo que esté escribiendo en el chat.
+============================================================ */
+setInterval(() => {
+  inicializarHorario();
+  inicializarApariencia();
+  verificarVersionNueva();
+}, 5 * 60 * 1000); // cada 5 minutos
+
+/* ============================================================
+   Aviso de versión nueva — cuando alguien deja la página abierta
+   y mientras tanto subimos un cambio, le avisamos para que
+   actualice (sin recargarla por su cuenta y sin perder su chat).
+============================================================ */
+const APP_VERSION = '2026-10-06-1';
+let avisoVersionMostrado = false;
+
+async function verificarVersionNueva(){
+  if(avisoVersionMostrado) return;
+  try{
+    const res = await fetch('/version.json?_=' + Date.now(), { cache: 'no-store' });
+    if(!res.ok) return;
+    const data = await res.json();
+    if(data.version && data.version !== APP_VERSION){
+      avisoVersionMostrado = true;
+      document.getElementById('update-toast').classList.add('show');
+    }
+  }catch(e){ /* si falla, simplemente no mostramos el aviso */ }
+}
+setTimeout(verificarVersionNueva, 15000); // una primera revisión a los 15s de cargar
 
 /* ============================================================
    Radicado legible: AA-PROGRAMA-0001 (año-programa-consecutivo),
