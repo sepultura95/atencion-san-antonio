@@ -159,6 +159,19 @@
     padding:14px 16px;font-size:13.5px;line-height:1.6;color:var(--text-secondary);
   }
 
+  /* ---------- Chips de estadística (actividades administrativas) ---------- */
+  .stats-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
+  .stat-chip{
+    background:var(--bg-card-2);border:1px solid var(--border);border-radius:8px;
+    padding:12px 16px;flex:1;min-width:140px;
+  }
+  .stat-chip .num{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--text-primary);line-height:1.1;}
+  .stat-chip .lbl{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-top:5px;}
+  .badge-top{
+    display:inline-block;font-size:10px;font-weight:700;color:var(--bg-page);background:var(--accent);
+    border-radius:4px;padding:1px 6px;margin-left:8px;text-transform:uppercase;letter-spacing:.03em;vertical-align:1px;
+  }
+
   .dash-footer{text-align:center;font-size:12px;color:var(--text-muted);margin-top:4px;}
   .vacio-aviso{font-size:13.5px;color:var(--text-muted);padding:10px 0;}
   .drill-link{font-size:12px;text-decoration:none;color:var(--accent);font-weight:600;margin-left:8px;}
@@ -663,6 +676,45 @@ function construirTendenciaMensual(solicitudesScope){
 }
 
 /* ============================================================
+   Actividades administrativas (actas, oficios, foliación, etc.)
+============================================================ */
+function construirSeccionActividades(actividadesScope){
+  if(!actividadesScope.length){
+    return '<p class="vacio-aviso">Todavía no hay actividades administrativas registradas en este ámbito.</p>';
+  }
+  const totalCant = actividadesScope.reduce((s,a) => s + (a.cantidad || 1), 0);
+  const totalMin = actividadesScope.reduce((s,a) => s + (a.tiempo_minutos || 0), 0);
+  const horas = totalMin ? redondear1(totalMin / 60) : 0;
+
+  const porTipo = {};
+  actividadesScope.forEach(a => { porTipo[a.tipo] = (porTipo[a.tipo] || 0) + (a.cantidad || 1); });
+  const filasTipo = Object.entries(porTipo)
+    .map(([tipo, cant]) => ({ tipo, cant }))
+    .sort((a,b) => b.cant - a.cant);
+  const tipoTop = filasTipo[0] ? filasTipo[0].tipo : '—';
+  const max = Math.max(1, ...filasTipo.map(f => f.cant));
+
+  const stats = `
+    <div class="stats-row">
+      <div class="stat-chip"><div class="num">${totalCant}</div><div class="lbl">Actividades registradas</div></div>
+      <div class="stat-chip"><div class="num">${totalMin}</div><div class="lbl">Minutos dedicados${horas ? ' (' + horas + ' h)' : ''}</div></div>
+      <div class="stat-chip"><div class="num">${filasTipo.length}</div><div class="lbl">Tipos distintos de actividad</div></div>
+    </div>`;
+
+  const lista = filasTipo.map((f,i) => {
+    const ancho = Math.max(4, Math.round((f.cant / max) * 100));
+    return `
+      <div class="bar-row">
+        <div class="bar-label">${f.tipo}${i===0 ? '<span class="badge-top">más frecuente</span>' : ''}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${ancho}%;background:var(--accent);"></div></div>
+        <div class="bar-value">${f.cant}</div>
+      </div>`;
+  }).join('');
+
+  return stats + lista;
+}
+
+/* ============================================================
    Listas tipo barra: por programa / por funcionario
 ============================================================ */
 function construirListaBarras(filas, { selectorDestino } = {}){
@@ -729,6 +781,13 @@ function renderDashboard(){
   html += `<div class="seccion"><h2>Solicitudes por estado</h2><p class="seccion-sub">Distribución del total en este ámbito.</p>${construirDonaEstado(kpis)}</div>`;
   html += `<div class="seccion"><h2>Tendencia mensual</h2><p class="seccion-sub">Solicitudes creadas por mes, últimos 8 meses.</p>${construirTendenciaMensual(ambito.solicitudesScope)}</div>`;
   html += `</div>`;
+
+  if(!ambito.esPrograma){
+    html += `<div class="seccion"><h2>Actividades administrativas</h2>`;
+    html += `<p class="seccion-sub">Actas, oficios, foliación, resoluciones, decretos, comités, visitas y demás, registradas por fuera del chatbot.</p>`;
+    html += construirSeccionActividades(ambito.actividadesScope);
+    html += `</div>`;
+  }
 
   html += `<div class="seccion"><h2>Resumen en palabras simples</h2>`;
   html += `<div class="resumen-texto">${construirResumenTexto(ambito, kpis)}</div>`;
