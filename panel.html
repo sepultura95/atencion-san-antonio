@@ -272,6 +272,7 @@
       </div>
       <button class="btn-ghost" id="btn-apariencia" style="display:none;">🎨 Apariencia</button>
       <button class="btn-ghost" id="btn-avisos" style="display:none;">📅 Días sin atención</button>
+      <button class="btn-ghost" id="btn-documentos" style="display:none;">📁 Documentos</button>
       <button class="btn-ghost" id="btn-actividades" style="display:none;">📋 Registrar actividad</button>
       <a class="btn-ghost" id="btn-dashboard" href="dashboard.html" style="display:none;text-decoration:none;">📈 Indicadores</a>
       <button class="btn-ghost" id="btn-exportar-excel" style="display:none;">📊 Exportar a Excel</button>
@@ -380,6 +381,11 @@
       <label for="act-fecha">Fecha</label>
       <input type="date" id="act-fecha">
     </div>
+    <div class="field">
+      <label for="act-archivo">Adjuntar el documento (opcional)</label>
+      <input type="file" id="act-archivo" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+      <p style="font-size:11.5px;color:var(--ink-soft);margin:4px 0 0;">Así tu coordinador(a) encuentra el acta, oficio o documento ya terminado, sin tener que pedírtelo. Máx. 10&nbsp;MB.</p>
+    </div>
     <div class="modal-actions" style="justify-content:flex-start;">
       <button class="btn-save" id="btn-actividades-agregar">Guardar</button>
     </div>
@@ -390,6 +396,25 @@
 
     <div class="modal-actions">
       <button class="btn-cancel" id="btn-actividades-cerrar">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-documentos-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-documentos-title">
+  <div class="modal-card" style="max-width:640px;">
+    <h2 id="modal-documentos-title">📁 Documentos de actividades</h2>
+    <p class="modal-sub">Todos los documentos que el equipo ha adjuntado al registrar una actividad administrativa — entras y ya los encuentras, sin tener que pedirlos.</p>
+
+    <div class="field">
+      <label for="doc-filtro-funcionario">Filtrar por funcionario</label>
+      <select id="doc-filtro-funcionario"><option value="todos">Todos</option></select>
+    </div>
+
+    <div id="documentos-lista" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;margin-top:10px;"></div>
+    <div class="modal-msg" id="doc-msg" role="status" aria-live="polite"></div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btn-documentos-cerrar">Cerrar</button>
     </div>
   </div>
 </div>
@@ -579,7 +604,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-07-17';
+const APP_VERSION = '2026-10-07-18';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -690,6 +715,7 @@ async function afterLogin(){
   if(esCoordinador){
     document.getElementById('btn-avisos').style.display = 'inline-block';
     document.getElementById('btn-apariencia').style.display = 'inline-block';
+    document.getElementById('btn-documentos').style.display = 'inline-block';
   }
   document.getElementById('staff-shell').classList.add('active');
   document.getElementById('topbar-sub').textContent =
@@ -899,6 +925,21 @@ async function subirPdfFuncionario(file, solicitudId){
   const { error } = await sb.storage.from('adjuntos').upload(path, file, { contentType:'application/pdf' });
   if(error){ console.error(error); throw new Error('SUBIDA'); }
   const { data } = sb.storage.from('adjuntos').getPublicUrl(path);
+  return { url: data.publicUrl, nombre: file.name };
+}
+
+const MAX_DOC_BYTES = 10 * 1024 * 1024;
+const TIPOS_DOC_PERMITIDOS = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','image/jpeg','image/png'];
+
+async function subirDocumentoActividad(file, funcionarioId){
+  if(file.size > MAX_DOC_BYTES) throw new Error('TAMANO');
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const extsOk = ['pdf','doc','docx','xls','xlsx','jpg','jpeg','png'];
+  if(!extsOk.includes(ext) && !TIPOS_DOC_PERMITIDOS.includes(file.type)) throw new Error('TIPO');
+  const path = `${funcionarioId}/${Date.now()}-${file.name}`.replace(/\s+/g,'_');
+  const { error } = await sb.storage.from('actividades-docs').upload(path, file, { contentType: file.type || undefined });
+  if(error){ console.error(error); throw new Error('SUBIDA'); }
+  const { data } = sb.storage.from('actividades-docs').getPublicUrl(path);
   return { url: data.publicUrl, nombre: file.name };
 }
 
@@ -1192,6 +1233,71 @@ document.getElementById('modal-actividades-overlay').addEventListener('click', (
   if(e.target.id === 'modal-actividades-overlay') cerrarModalActividades();
 });
 
+document.getElementById('btn-documentos').addEventListener('click', abrirModalDocumentos);
+document.getElementById('btn-documentos-cerrar').addEventListener('click', cerrarModalDocumentos);
+document.getElementById('modal-documentos-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'modal-documentos-overlay') cerrarModalDocumentos();
+});
+document.getElementById('doc-filtro-funcionario').addEventListener('change', renderListaDocumentos);
+
+let documentosData = [];
+
+async function abrirModalDocumentos(){
+  const msg = document.getElementById('doc-msg');
+  const lista = document.getElementById('documentos-lista');
+  const filtro = document.getElementById('doc-filtro-funcionario');
+  msg.textContent = 'Cargando…';
+  lista.innerHTML = '';
+  filtro.innerHTML = '<option value="todos">Todos</option>';
+  document.getElementById('modal-documentos-overlay').classList.add('open');
+
+  const { data, error } = await sb.from('actividades_administrativas')
+    .select('*, perfiles_funcionario(nombre)')
+    .not('archivo_url', 'is', null)
+    .order('fecha', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if(error){ msg.textContent = 'No se pudo cargar la lista de documentos.'; return; }
+  documentosData = data || [];
+  msg.textContent = '';
+
+  const nombres = Array.from(new Set(documentosData.map(a => (a.perfiles_funcionario && a.perfiles_funcionario.nombre) || 'Sin nombre'))).sort();
+  nombres.forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = n;
+    filtro.appendChild(opt);
+  });
+
+  renderListaDocumentos();
+}
+
+function renderListaDocumentos(){
+  const lista = document.getElementById('documentos-lista');
+  const filtro = document.getElementById('doc-filtro-funcionario').value;
+  let filas = documentosData;
+  if(filtro !== 'todos'){
+    filas = filas.filter(a => ((a.perfiles_funcionario && a.perfiles_funcionario.nombre) || 'Sin nombre') === filtro);
+  }
+  if(filas.length === 0){
+    lista.innerHTML = '<div class="empty-state">No hay documentos adjuntos todavía.</div>';
+    return;
+  }
+  lista.innerHTML = filas.map(a => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:6px;padding:9px 11px;">
+      <div>
+        <div style="font-weight:600;font-size:13px;">${escapeHtml(a.tipo)} · ${escapeHtml((a.perfiles_funcionario && a.perfiles_funcionario.nombre) || 'Sin nombre')}</div>
+        <div style="font-size:12px;color:var(--ink-soft);">${escapeHtml(a.fecha)}${a.descripcion ? ' · ' + escapeHtml(a.descripcion) : ''}</div>
+      </div>
+      <a class="btn-small" style="background:var(--green-700);color:#fff;text-decoration:none;" href="${a.archivo_url}" target="_blank" rel="noopener">📎 Abrir</a>
+    </div>
+  `).join('');
+}
+
+function cerrarModalDocumentos(){
+  document.getElementById('modal-documentos-overlay').classList.remove('open');
+}
+
 async function abrirModalActividades(){
   document.getElementById('act-tipo').value = 'Acta de reunión';
   document.getElementById('act-descripcion').value = '';
@@ -1199,6 +1305,8 @@ async function abrirModalActividades(){
   document.getElementById('act-minutos').value = '';
   document.getElementById('act-fecha').value = new Date().toISOString().slice(0,10);
   document.getElementById('act-msg').textContent = '';
+  const archivoInput = document.getElementById('act-archivo');
+  if(archivoInput) archivoInput.value = '';
   await cargarActividades();
   document.getElementById('modal-actividades-overlay').classList.add('open');
 }
@@ -1222,6 +1330,7 @@ async function cargarActividades(){
       <div>
         <div style="font-weight:600;font-size:13px;">${escapeHtml(a.tipo)}${a.cantidad > 1 ? ' (x' + a.cantidad + ')' : ''}</div>
         <div style="font-size:12px;color:var(--ink-soft);">${escapeHtml(a.fecha)}${a.tiempo_minutos ? ' · ' + a.tiempo_minutos + ' min' : ''}${a.descripcion ? ' · ' + escapeHtml(a.descripcion) : ''}</div>
+        ${a.archivo_url ? `<div style="font-size:12px;margin-top:3px;"><a href="${a.archivo_url}" target="_blank" rel="noopener">📎 ${escapeHtml(a.archivo_nombre || 'Documento')}</a></div>` : ''}
       </div>
       <button class="btn-small" style="background:var(--red-700);color:#fff;" onclick="eliminarActividad('${a.id}')">Eliminar</button>
     </div>
@@ -1235,9 +1344,25 @@ async function agregarActividad(){
   const minutosVal = document.getElementById('act-minutos').value;
   const tiempo_minutos = minutosVal ? parseInt(minutosVal, 10) : null;
   const fecha = document.getElementById('act-fecha').value;
+  const archivoInput = document.getElementById('act-archivo');
+  const archivo = archivoInput && archivoInput.files[0] ? archivoInput.files[0] : null;
   const msg = document.getElementById('act-msg');
   if(!fecha){ msg.textContent = 'Elige una fecha.'; return; }
   if(cantidad < 1){ msg.textContent = 'La cantidad debe ser al menos 1.'; return; }
+  let archivo_url = null, archivo_nombre = null;
+  if(archivo){
+    msg.textContent = 'Subiendo documento…';
+    try{
+      const subido = await subirDocumentoActividad(archivo, perfil.id);
+      archivo_url = subido.url;
+      archivo_nombre = subido.nombre;
+    }catch(e){
+      if(e.message === 'TAMANO'){ msg.textContent = 'El documento supera 10 MB.'; return; }
+      if(e.message === 'TIPO'){ msg.textContent = 'Tipo de archivo no permitido.'; return; }
+      msg.textContent = 'No se pudo subir el documento. Intenta de nuevo.';
+      return;
+    }
+  }
   msg.textContent = 'Guardando…';
   const { error } = await sb.from('actividades_administrativas').insert({
     funcionario_id: perfil.id,
@@ -1246,12 +1371,15 @@ async function agregarActividad(){
     cantidad,
     tiempo_minutos,
     fecha,
+    archivo_url,
+    archivo_nombre,
   });
   if(error){ msg.textContent = 'Error al guardar: ' + error.message; return; }
   msg.textContent = 'Actividad guardada ✓';
   document.getElementById('act-descripcion').value = '';
   document.getElementById('act-cantidad').value = '1';
   document.getElementById('act-minutos').value = '';
+  if(archivoInput) archivoInput.value = '';
   await cargarActividades();
 }
 
