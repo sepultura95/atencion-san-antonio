@@ -337,6 +337,37 @@
       </div>
     </div>
 
+    <div class="field" style="margin-top:18px;border-top:1px solid var(--line);padding-top:16px;">
+      <label>Contenido destacado (arriba a la derecha, junto al título)</label>
+      <p style="font-size:11.5px;color:var(--ink-soft);margin:4px 0 8px;">Muestra una imagen, un video o una noticia corta en la página principal, al lado del título.</p>
+      <select id="dest-tipo" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:13px;">
+        <option value="">Ninguno</option>
+        <option value="imagen">Imagen</option>
+        <option value="video">Video (enlace de YouTube, Vimeo o .mp4)</option>
+        <option value="noticia">Noticia (solo texto)</option>
+      </select>
+
+      <div id="dest-campo-imagen" style="display:none;margin-top:10px;">
+        <label style="font-size:11.5px;color:var(--ink-soft);">Imagen (PNG, JPG o WEBP, hasta 2 MB)</label><br>
+        <input type="file" id="dest-imagen-file" accept="image/png,image/jpeg,image/webp">
+      </div>
+      <div id="dest-campo-video" style="display:none;margin-top:10px;">
+        <label style="font-size:11.5px;color:var(--ink-soft);">Enlace del video (YouTube, Vimeo o archivo .mp4)</label>
+        <input type="text" id="dest-video-url" placeholder="https://www.youtube.com/watch?v=..." style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;margin-top:4px;">
+      </div>
+      <div id="dest-campo-texto" style="display:none;margin-top:10px;">
+        <label style="font-size:11.5px;color:var(--ink-soft);">Título (opcional)</label>
+        <input type="text" id="dest-titulo" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;margin-top:4px;">
+        <label style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;display:block;">Texto</label>
+        <textarea id="dest-texto" rows="3" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;margin-top:4px;font-family:inherit;"></textarea>
+      </div>
+
+      <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn-small" id="btn-dest-guardar" style="background:var(--green-700);color:#fff;">Guardar destacado</button>
+        <button class="btn-small" id="btn-dest-quitar" style="background:var(--paper-dim);">Quitar destacado</button>
+      </div>
+    </div>
+
     <div class="modal-msg" id="ap-msg" role="status" aria-live="polite"></div>
     <div class="modal-actions">
       <button class="btn-cancel" id="btn-apariencia-cerrar">Cerrar</button>
@@ -604,7 +635,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-07-20';
+const APP_VERSION = '2026-10-07-21';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -1024,6 +1055,9 @@ document.getElementById('btn-ap-logo-subir').addEventListener('click', ()=>subir
 document.getElementById('btn-ap-fondo-subir').addEventListener('click', ()=>subirImagenApariencia('header_fondo_url', document.getElementById('ap-fondo-file')));
 document.getElementById('btn-ap-logo-quitar').addEventListener('click', ()=>quitarImagenApariencia('logo_url'));
 document.getElementById('btn-ap-fondo-quitar').addEventListener('click', ()=>quitarImagenApariencia('header_fondo_url'));
+document.getElementById('dest-tipo').addEventListener('change', actualizarCamposDestacado);
+document.getElementById('btn-dest-guardar').addEventListener('click', guardarDestacado);
+document.getElementById('btn-dest-quitar').addEventListener('click', quitarDestacado);
 document.getElementById('btn-ap-logo-guardar-pos').addEventListener('click', guardarPosicionLogo);
 document.getElementById('btn-ap-fondo-guardar-pos').addEventListener('click', guardarPosicionFondo);
 
@@ -1104,11 +1138,87 @@ async function abrirModalApariencia(){
     fondoGuardarBtn.style.display = 'none';
   }
 
+  const destTipo = apConfigActual.destacado_tipo || '';
+  document.getElementById('dest-tipo').value = destTipo;
+  document.getElementById('dest-imagen-file').value = '';
+  document.getElementById('dest-video-url').value = destTipo === 'video' ? (apConfigActual.destacado_url || '') : '';
+  document.getElementById('dest-titulo').value = apConfigActual.destacado_titulo || '';
+  document.getElementById('dest-texto').value = apConfigActual.destacado_texto || '';
+  actualizarCamposDestacado();
+
   document.getElementById('modal-apariencia-overlay').classList.add('open');
 }
 
 function cerrarModalApariencia(){
   document.getElementById('modal-apariencia-overlay').classList.remove('open');
+}
+
+function actualizarCamposDestacado(){
+  const tipo = document.getElementById('dest-tipo').value;
+  document.getElementById('dest-campo-imagen').style.display = tipo === 'imagen' ? 'block' : 'none';
+  document.getElementById('dest-campo-video').style.display = tipo === 'video' ? 'block' : 'none';
+  document.getElementById('dest-campo-texto').style.display = tipo ? 'block' : 'none';
+}
+
+async function guardarDestacado(){
+  const msg = document.getElementById('ap-msg');
+  const tipo = document.getElementById('dest-tipo').value;
+
+  if(!tipo){
+    const { error } = await sb.from('configuracion_sitio').update({
+      destacado_tipo: null, destacado_url: null, destacado_titulo: null, destacado_texto: null,
+      updated_at: new Date().toISOString()
+    }).eq('id', 1);
+    msg.textContent = error ? ('Error: ' + error.message) : 'Destacado desactivado.';
+    await abrirModalApariencia();
+    return;
+  }
+
+  const titulo = document.getElementById('dest-titulo').value.trim();
+  const texto = document.getElementById('dest-texto').value.trim();
+  let url = null;
+
+  if(tipo === 'imagen'){
+    const file = document.getElementById('dest-imagen-file').files[0];
+    if(file){
+      if(file.size > MAX_IMG_BYTES){ msg.textContent = 'La imagen pesa más de 2 MB.'; return; }
+      msg.textContent = 'Subiendo imagen…';
+      const ext = file.name.split('.').pop();
+      const ruta = 'destacado-' + Date.now() + '.' + ext;
+      const { error: upErr } = await sb.storage.from('branding').upload(ruta, file, { upsert: true });
+      if(upErr){ msg.textContent = 'Error al subir: ' + upErr.message; return; }
+      const { data: pub } = sb.storage.from('branding').getPublicUrl(ruta);
+      url = pub.publicUrl;
+    } else if(apConfigActual.destacado_tipo === 'imagen' && apConfigActual.destacado_url){
+      url = apConfigActual.destacado_url;
+    } else {
+      msg.textContent = 'Elige una imagen para subir.';
+      return;
+    }
+  } else if(tipo === 'video'){
+    url = document.getElementById('dest-video-url').value.trim();
+    if(!url){ msg.textContent = 'Pega el enlace del video.'; return; }
+  } else if(tipo === 'noticia'){
+    if(!titulo && !texto){ msg.textContent = 'Escribe un título o un texto para la noticia.'; return; }
+  }
+
+  msg.textContent = 'Guardando…';
+  const { error } = await sb.from('configuracion_sitio').update({
+    destacado_tipo: tipo,
+    destacado_url: url,
+    destacado_titulo: titulo || null,
+    destacado_texto: texto || null,
+    updated_at: new Date().toISOString()
+  }).eq('id', 1);
+  if(error){ msg.textContent = 'Error al guardar: ' + error.message; return; }
+  msg.textContent = 'Destacado guardado ✓';
+  await abrirModalApariencia();
+}
+
+async function quitarDestacado(){
+  document.getElementById('dest-tipo').value = '';
+  actualizarCamposDestacado();
+  await guardarDestacado();
 }
 
 async function subirImagenApariencia(campo, inputFile){
