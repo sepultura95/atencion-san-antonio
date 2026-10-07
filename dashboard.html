@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Indicadores — Programas Sociales</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --green-900:#163a2f;
+    --green-700:#1f4b3f;
+    --green-600:#2b5f4f;
+    --ochre-600:#b5812a;
+    --ochre-500:#c98a2b;
+    --ochre-100:#f3e4c6;
+    --paper:#f7f5ee;
+    --paper-dim:#efece2;
+    --ink:#272420;
+    --ink-soft:#4a463e;
+    --line:#ddd6c6;
+    --red-700:#9c3b2b;
+    --verde-ok:#2f8f5b;
+    --gris-na:#948d7d;
+    --white:#ffffff;
+    --radius-card:4px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:60px;
+  }
+  h1,h2,h3{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    letter-spacing:-0.01em;
+    margin:0;
+    color:var(--green-900);
+  }
+  button,select{font-family:inherit;cursor:pointer;}
+  a{color:var(--green-700);}
+  .sr-only{
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0;
+  }
+  a:focus-visible, button:focus-visible, select:focus-visible{
+    outline:3px solid var(--ochre-500);outline-offset:2px;
+  }
+
+  .topbar{
+    background:var(--green-700);color:var(--white);padding:14px 20px;
+    border-bottom:3px solid var(--ochre-500);position:relative;overflow:hidden;
+  }
+  .topbar-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  .topbar .left{display:flex;align-items:center;gap:12px;}
+  .seal{
+    width:36px;height:36px;border-radius:50%;background:var(--ochre-500);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Fraunces',serif;font-weight:700;color:var(--green-900);
+    font-size:15px;overflow:hidden;flex:none;
+  }
+  .seal img{width:100%;height:100%;object-fit:cover;}
+  .topbar h1{color:var(--white);font-size:17px;}
+  .topbar .sub{font-size:12px;color:var(--ochre-100);margin-top:2px;}
+  .topbar .right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .btn-ghost{
+    background:transparent;border:1px solid rgba(255,255,255,.4);color:var(--white);
+    padding:8px 14px;border-radius:4px;font-size:13px;text-decoration:none;display:inline-block;
+  }
+  .btn-ghost:hover{background:rgba(255,255,255,.12);}
+  .text-ctrl{display:flex;gap:4px;flex:none;}
+  .text-ctrl button{
+    background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.35);color:var(--white);
+    width:30px;height:30px;border-radius:6px;font-weight:700;line-height:1;
+  }
+  .text-ctrl button:hover{background:rgba(255,255,255,0.25);}
+
+  .wrap{max-width:1040px;margin:0 auto;padding:22px 18px;}
+
+  .login-card{
+    max-width:440px;margin:80px auto;background:var(--white);border:1px solid var(--line);
+    border-radius:var(--radius-card);padding:32px 28px;text-align:center;
+  }
+  .login-card h2{font-size:21px;margin-bottom:8px;}
+  .login-card p{color:var(--ink-soft);font-size:14px;margin:0 0 20px;}
+  .btn-primary{
+    background:var(--green-700);color:var(--white);border:none;padding:11px 18px;border-radius:4px;
+    font-size:14px;font-weight:600;text-decoration:none;display:inline-block;
+  }
+  .btn-primary:hover{background:var(--green-900);}
+
+  .dash-toolbar{
+    display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    background:var(--white);border:1px solid var(--line);border-radius:var(--radius-card);
+    padding:14px 16px;margin-bottom:18px;
+  }
+  .dash-toolbar label{font-size:12px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;display:block;margin-bottom:5px;}
+  #sel-ambito{padding:9px 10px;border:1px solid var(--line);border-radius:4px;font-size:14px;background:var(--paper);min-width:260px;}
+  .btn-actualizar{background:var(--paper);border:1px solid var(--line);color:var(--green-700);padding:9px 14px;border-radius:4px;font-size:13px;font-weight:600;}
+  .btn-actualizar:hover{background:var(--paper-dim);}
+
+  .seccion{background:var(--white);border:1px solid var(--line);border-radius:var(--radius-card);padding:18px 20px;margin-bottom:18px;}
+  .seccion h2{font-size:16px;margin-bottom:4px;}
+  .seccion .seccion-sub{font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-bottom:18px;}
+  .kpi-card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius-card);padding:16px;}
+  .kpi-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .kpi-dot{width:11px;height:11px;border-radius:50%;flex:none;}
+  .kpi-titulo{font-size:12px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;}
+  .kpi-valor{font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:var(--green-900);line-height:1.1;margin-bottom:8px;}
+  .kpi-frase{font-size:13px;color:var(--ink);line-height:1.45;margin-bottom:6px;}
+  .kpi-recom{font-size:12.5px;color:var(--ochre-600);background:var(--ochre-100);border-radius:4px;padding:7px 9px;line-height:1.4;}
+  .kpi-recom.ok{color:var(--verde-ok);background:#e6f3ec;}
+
+  .sf-verde{background:var(--verde-ok);}
+  .sf-amarillo{background:var(--ochre-500);}
+  .sf-rojo{background:var(--red-700);}
+  .sf-gris{background:var(--gris-na);}
+
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:11px;}
+  .bar-label{width:200px;font-size:13px;color:var(--ink-soft);flex:none;}
+  .bar-track{flex:1;background:var(--paper-dim);border-radius:6px;height:16px;overflow:hidden;display:flex;}
+  .bar-fill{height:100%;}
+  .bar-value{width:150px;text-align:right;font-size:12.5px;color:var(--ink-soft);flex:none;}
+
+  .estado-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12.5px;color:var(--ink-soft);}
+  .estado-legend span{display:inline-flex;align-items:center;gap:6px;}
+  .estado-legend i{width:10px;height:10px;border-radius:2px;display:inline-block;}
+
+  .resumen-texto{
+    background:var(--paper-dim);border-left:4px solid var(--green-600);border-radius:0 4px 4px 0;
+    padding:12px 14px;font-size:13.5px;line-height:1.55;color:var(--ink);margin-bottom:4px;
+  }
+
+  .dash-footer{text-align:center;font-size:12px;color:var(--ink-soft);margin-top:4px;}
+  .vacio-aviso{font-size:13.5px;color:var(--ink-soft);padding:10px 0;}
+  .drill-link{font-size:12.5px;text-decoration:none;color:var(--green-700);font-weight:600;}
+  .drill-link:hover{text-decoration:underline;}
+
+  @media (max-width:640px){
+    .bar-label{width:120px;font-size:12px;}
+    .bar-value{width:110px;font-size:11.5px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="left">
+      <div class="seal" id="seal">PS</div>
+      <div>
+        <h1>Indicadores de gestión</h1>
+        <div class="sub" id="topbar-sub">Programas Sociales — Alcaldía de San Antonio</div>
+      </div>
+    </div>
+    <div class="right">
+      <a class="btn-ghost" href="panel.html">← Volver al panel</a>
+      <div class="text-ctrl" aria-label="Tamaño del texto">
+        <button type="button" onclick="cambiarTextoTamano(-1)" aria-label="Reducir tamaño de texto">A-</button>
+        <button type="button" onclick="cambiarTextoTamano(0)" aria-label="Tamaño de texto normal">A</button>
+        <button type="button" onclick="cambiarTextoTamano(1)" aria-label="Aumentar tamaño de texto">A+</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="login-gate" class="wrap" style="display:none;">
+  <div class="login-card">
+    <h2>Inicia sesión primero</h2>
+    <p>Para ver los indicadores de gestión, primero debes iniciar sesión en el panel de funcionarios.</p>
+    <a class="btn-primary" href="panel.html">Ir al panel</a>
+  </div>
+</div>
+
+<div id="dash-shell" class="wrap" style="display:none;">
+
+  <div class="dash-toolbar">
+    <div>
+      <label for="sel-ambito">Ver indicadores de</label>
+      <select id="sel-ambito"></select>
+    </div>
+    <button class="btn-actualizar" id="btn-actualizar">🔄 Actualizar</button>
+  </div>
+
+  <div id="dash-content"></div>
+
+  <p class="dash-footer" id="dash-generado"></p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://yjkibftpjvhedbmscbwo.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_elPZQ7xh3ManlHtDWJY1DA_1TgwZvgk';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const PROGRAMAS = ['Adulto Mayor','Discapacidad','Víctimas del Conflicto','Comunidades Indígenas','Renta Ciudadana','Renta Joven','Devolución del IVA'];
+
+/* ---------- Apariencia (reutiliza la misma configuración del portal/panel) ---------- */
+async function inicializarApariencia(){
+  try{
+    const { data } = await sb.from('configuracion_sitio').select('*').eq('id', 1).single();
+    if(!data) return;
+    if(data.logo_url){
+      const seal = document.getElementById('seal');
+      const px = data.logo_pos_x ?? 50, py = data.logo_pos_y ?? 50;
+      const lz = (data.logo_zoom ?? 100) / 100;
+      seal.innerHTML = `<img src="${data.logo_url}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima" style="object-position:${px}% ${py}%;transform:scale(${lz});">`;
+    }
+  }catch(e){ /* sin configuración todavía: queda el diseño por defecto */ }
+}
+inicializarApariencia();
+
+/* ---------- Accesibilidad — control de tamaño de texto ---------- */
+(function(){
+  const NIVELES = [100, 115, 130, 145];
+  let idx = parseInt(localStorage.getItem('sa_texto_idx') || '0', 10);
+  if (isNaN(idx) || idx < 0 || idx >= NIVELES.length) idx = 0;
+  function aplicar(){ document.body.style.zoom = NIVELES[idx] + '%'; }
+  window.cambiarTextoTamano = function(dir){
+    idx = (dir === 0) ? 0 : Math.min(NIVELES.length - 1, Math.max(0, idx + dir));
+    localStorage.setItem('sa_texto_idx', idx);
+    aplicar();
+  };
+  aplicar();
+})();
+
+/* ============================================================
+   Estado y arranque
+============================================================ */
+let perfil = null;
+let esCoordinador = false;
+let solicitudesData = [];
+let actividadesData = [];
+let encuestasData = [];
+let funcionariosMap = {};     // id -> nombre
+let nombreAId = {};           // nombre -> id
+let kpiGeneral = null;        // punto de comparación ("promedio del equipo")
+
+(async function boot(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){
+    document.getElementById('login-gate').style.display = 'block';
+    return;
+  }
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user){ document.getElementById('login-gate').style.display = 'block'; return; }
+
+  const { data, error } = await sb.from('perfiles_funcionario').select('*').eq('id', user.id).single();
+  if(error || !data){
+    document.getElementById('login-gate').style.display = 'block';
+    return;
+  }
+  perfil = data;
+  const misProgramas = (Array.isArray(perfil.programas) && perfil.programas.length > 0)
+    ? perfil.programas
+    : (perfil.programa ? [perfil.programa] : []);
+  perfil.misProgramas = misProgramas;
+  esCoordinador = misProgramas.includes('TODAS');
+
+  document.getElementById('topbar-sub').textContent =
+    (perfil.nombre || 'Funcionario') + ' · ' + (esCoordinador ? 'Coordinación (todos los programas)' : misProgramas.join(', '));
+
+  document.getElementById('dash-shell').style.display = 'block';
+  document.getElementById('btn-actualizar').addEventListener('click', cargarTodo);
+  document.getElementById('sel-ambito').addEventListener('change', renderDashboard);
+
+  await cargarTodo();
+})();
+
+async function cargarTodo(){
+  const btn = document.getElementById('btn-actualizar');
+  btn.disabled = true; btn.textContent = 'Actualizando…';
+  try{
+    const [solRes, actRes, encRes, perfRes] = await Promise.all([
+      sb.from('solicitudes').select('*'),
+      sb.from('actividades_administrativas').select('*'),
+      sb.from('encuestas_satisfaccion').select('*'),
+      sb.from('perfiles_funcionario').select('id, nombre'),
+    ]);
+    solicitudesData = solRes.data || [];
+    actividadesData = actRes.data || [];
+    encuestasData = encRes.data || [];
+    funcionariosMap = {}; nombreAId = {};
+    (perfRes.data || []).forEach(p => { funcionariosMap[p.id] = p.nombre; nombreAId[p.nombre] = p.id; });
+    if(!funcionariosMap[perfil.id]){ funcionariosMap[perfil.id] = perfil.nombre || 'Yo'; nombreAId[perfil.nombre] = perfil.id; }
+
+    kpiGeneral = calcularKPIs(solicitudesData, encuestasData);
+
+    poblarSelectorAmbito();
+    renderDashboard();
+    document.getElementById('dash-generado').textContent =
+      'Generado con base en los datos registrados hasta ahora — ' + new Date().toLocaleString('es-CO');
+  }catch(e){
+    console.error(e);
+    document.getElementById('dash-content').innerHTML = '<p class="vacio-aviso">No se pudieron cargar los indicadores. Intenta actualizar de nuevo.</p>';
+  }
+  btn.disabled = false; btn.textContent = '🔄 Actualizar';
+}
+
+/* ============================================================
+   Selector de ámbito
+============================================================ */
+function poblarSelectorAmbito(){
+  const sel = document.getElementById('sel-ambito');
+  const valorPrevio = sel.value;
+  sel.innerHTML = '';
+
+  function opt(value, label){
+    const o = document.createElement('option');
+    o.value = value; o.textContent = label; sel.appendChild(o);
+  }
+
+  if(esCoordinador){
+    opt('general', '📊 General (todos los programas)');
+    opt('yo', '🙋 Mi desempeño (' + (perfil.nombre || 'yo') + ')');
+    const ogP = document.createElement('optgroup'); ogP.label = 'Por programa';
+    PROGRAMAS.forEach(p => { const o = document.createElement('option'); o.value = 'programa:' + p; o.textContent = p; ogP.appendChild(o); });
+    sel.appendChild(ogP);
+    const nombres = Object.values(funcionariosMap).filter(Boolean).sort((a,b)=>a.localeCompare(b));
+    if(nombres.length){
+      const ogF = document.createElement('optgroup'); ogF.label = 'Por funcionario';
+      nombres.forEach(n => { const o = document.createElement('option'); o.value = 'funcionario:' + n; o.textContent = n; ogF.appendChild(o); });
+      sel.appendChild(ogF);
+    }
+  }else{
+    opt('yo', '🙋 Mi desempeño');
+    opt('general', '📊 General de ' + (perfil.misProgramas.length > 1 ? 'mis programas' : ('mi programa: ' + perfil.misProgramas[0])));
+    if(perfil.misProgramas.length > 1){
+      const ogP = document.createElement('optgroup'); ogP.label = 'Por programa';
+      perfil.misProgramas.forEach(p => { const o = document.createElement('option'); o.value = 'programa:' + p; o.textContent = p; ogP.appendChild(o); });
+      sel.appendChild(ogP);
+    }
+  }
+
+  sel.value = valorPrevio && [...sel.options].some(o => o.value === valorPrevio) ? valorPrevio : (esCoordinador ? 'general' : 'yo');
+}
+
+function obtenerAmbito(){
+  const val = document.getElementById('sel-ambito').value;
+  let solicitudesScope = solicitudesData;
+  let actividadesScope = actividadesData;
+  let etiqueta = 'General (todos los programas)';
+  let esIndividual = false;
+  let esPrograma = false;
+
+  if(val === 'yo'){
+    etiqueta = 'Mi desempeño — ' + (perfil.nombre || '');
+    solicitudesScope = solicitudesData.filter(s => s.atendido_por === perfil.nombre);
+    actividadesScope = actividadesData.filter(a => a.funcionario_id === perfil.id);
+    esIndividual = true;
+  }else if(val.startsWith('funcionario:')){
+    const nombre = val.slice('funcionario:'.length);
+    const id = nombreAId[nombre];
+    etiqueta = 'Desempeño de ' + nombre;
+    solicitudesScope = solicitudesData.filter(s => s.atendido_por === nombre);
+    actividadesScope = actividadesData.filter(a => a.funcionario_id === id);
+    esIndividual = true;
+  }else if(val.startsWith('programa:')){
+    const prog = val.slice('programa:'.length);
+    etiqueta = 'Programa: ' + prog;
+    solicitudesScope = solicitudesData.filter(s => s.programa === prog);
+    actividadesScope = []; // las actividades administrativas no están ligadas a un programa
+    esPrograma = true;
+  }else{
+    etiqueta = esCoordinador ? 'General (todos los programas)' : ('General de ' + (perfil.misProgramas.length > 1 ? 'mis programas' : perfil.misProgramas[0]));
+    if(!esCoordinador){
+      solicitudesScope = solicitudesData.filter(s => perfil.misProgramas.includes(s.programa));
+    }
+  }
+
+  const idsScope = new Set(solicitudesScope.map(s => s.id));
+  const encuestasScope = encuestasData.filter(e => idsScope.has(e.solicitud_id));
+
+  return { val, etiqueta, esIndividual, esPrograma, solicitudesScope, actividadesScope, encuestasScope };
+}
+
+/* ============================================================
+   Cálculo de KPIs (mismo criterio usado en el Excel exportable)
+============================================================ */
+function redondear1(n){ return Math.round(n * 10) / 10; }
+function promedioNum(arr){
+  const nums = arr.filter(n => typeof n === 'number' && !isNaN(n));
+  return nums.length ? nums.reduce((a,b)=>a+b,0) / nums.length : null;
+}
+
+function calcularKPIs(solicitudes, encuestas){
+  const total = solicitudes.length;
+  const resueltas = solicitudes.filter(s => s.estado === 'resuelto');
+  const pendientes = solicitudes.filter(s => s.estado === 'pendiente').length;
+  const enProceso = solicitudes.filter(s => s.estado === 'en_proceso').length;
+  const eficacia = total ? (resueltas.length / total * 100) : null;
+
+  const dias = resueltas
+    .map(s => (s.created_at && s.resuelto_ts) ? (new Date(s.resuelto_ts) - new Date(s.created_at)) / (1000*60*60*24) : null)
+    .filter(d => d !== null);
+  const tiempoProm = promedioNum(dias);
+
+  const satisfacciones = encuestas.map(e => (e.tangibles + e.fiabilidad + e.capacidad_respuesta + e.seguridad + e.empatia) / 5);
+  const satisfaccion = promedioNum(satisfacciones);
+
+  return { total, resueltas: resueltas.length, pendientes, enProceso, eficacia, tiempoProm, satisfaccion };
+}
+
+/* ---------- Semáforos ---------- */
+function semEficacia(v){ if(v===null) return 'gris'; if(v>=80) return 'verde'; if(v>=50) return 'amarillo'; return 'rojo'; }
+function semTiempo(v){ if(v===null) return 'gris'; if(v<=3) return 'verde'; if(v<=7) return 'amarillo'; return 'rojo'; }
+function semSatisfaccion(v){ if(v===null) return 'gris'; if(v>=4) return 'verde'; if(v>=3) return 'amarillo'; return 'rojo'; }
+function semComparativo(v, bench){
+  if(v===null || bench===null || bench===0) return 'gris';
+  const dif = (v - bench) / bench;
+  if(dif >= -0.1) return 'verde';
+  if(dif >= -0.3) return 'amarillo';
+  return 'rojo';
+}
+
+const TEXTOS = {
+  eficacia: {
+    verde: 'La mayoría de las solicitudes se están resolviendo. Vas por buen camino.',
+    amarillo: 'Una parte importante de las solicitudes sigue sin resolverse.',
+    rojo: 'Muy pocas solicitudes se están resolviendo frente a las que llegan.',
+    gris: 'Todavía no hay solicitudes registradas en este ámbito para calcular este indicador.',
+  },
+  eficaciaRecom: {
+    amarillo: 'Revisa cuáles solicitudes llevan más tiempo pendientes y prioriza las más antiguas o las marcadas como prioritarias.',
+    rojo: 'Es necesario revisar la carga de trabajo y destrabar cuanto antes los casos represados; si hace falta, redistribuye solicitudes entre el equipo.',
+  },
+  tiempo: {
+    verde: 'Las solicitudes se están resolviendo con rapidez.',
+    amarillo: 'El tiempo de respuesta se está empezando a alargar.',
+    rojo: 'Las solicitudes están tardando demasiado en resolverse.',
+    gris: 'Todavía no hay solicitudes resueltas en este ámbito para calcular este indicador.',
+  },
+  tiempoRecom: {
+    amarillo: 'Vale la pena revisar si hay pasos del trámite que se puedan agilizar o estandarizar.',
+    rojo: 'Identifica en qué parte del proceso se están represando los casos; esto puede afectar la percepción del servicio.',
+  },
+  satisfaccion: {
+    verde: 'Los ciudadanos están quedando conformes con la atención recibida.',
+    amarillo: 'La satisfacción es aceptable, pero mejorable.',
+    rojo: 'La satisfacción de los ciudadanos está baja.',
+    gris: 'Todavía no hay encuestas respondidas en este ámbito.',
+  },
+  satisfaccionRecom: {
+    amarillo: 'Revisa los comentarios de las encuestas para identificar qué aspecto puntual bajó la calificación.',
+    rojo: 'Revisa con atención los comentarios de las encuestas y el trato o los tiempos de respuesta: algo concreto está afectando la experiencia del ciudadano.',
+  },
+};
+
+function tarjetaKPI({titulo, valorTexto, nivel, frase, recomendacion}){
+  const recomHtml = recomendacion
+    ? `<div class="kpi-recom${nivel==='verde' ? ' ok' : ''}">${nivel==='verde' ? '✓ ' : '→ '}${recomendacion}</div>`
+    : '';
+  return `
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-dot sf-${nivel}"></span><span class="kpi-titulo">${titulo}</span></div>
+      <div class="kpi-valor">${valorTexto}</div>
+      <div class="kpi-frase">${frase}</div>
+      ${recomHtml}
+    </div>`;
+}
+
+function construirKPIs(kpis, { conProductividad, actividadesScope, bench } = {}){
+  const cards = [];
+
+  const nivEf = semEficacia(kpis.eficacia);
+  cards.push(tarjetaKPI({
+    titulo: 'Eficacia',
+    valorTexto: kpis.eficacia !== null ? redondear1(kpis.eficacia) + '%' : '—',
+    nivel: nivEf,
+    frase: `${kpis.resueltas} resueltas de ${kpis.total} recibidas. ${TEXTOS.eficacia[nivEf]}`,
+    recomendacion: nivEf==='verde' ? 'Mantén el ritmo actual de resolución.' : TEXTOS.eficaciaRecom[nivEf],
+  }));
+
+  const nivTi = semTiempo(kpis.tiempoProm);
+  cards.push(tarjetaKPI({
+    titulo: 'Tiempo promedio de resolución',
+    valorTexto: kpis.tiempoProm !== null ? redondear1(kpis.tiempoProm) + ' días' : '—',
+    nivel: nivTi,
+    frase: TEXTOS.tiempo[nivTi],
+    recomendacion: nivTi==='verde' ? 'Sigue respondiendo con esta misma agilidad.' : TEXTOS.tiempoRecom[nivTi],
+  }));
+
+  const nivSa = semSatisfaccion(kpis.satisfaccion);
+  cards.push(tarjetaKPI({
+    titulo: 'Satisfacción ciudadana',
+    valorTexto: kpis.satisfaccion !== null ? redondear1(kpis.satisfaccion) + ' / 5' : '—',
+    nivel: nivSa,
+    frase: TEXTOS.satisfaccion[nivSa],
+    recomendacion: nivSa==='verde' ? 'Los ciudadanos lo están notando: sigue así.' : TEXTOS.satisfaccionRecom[nivSa],
+  }));
+
+  if(conProductividad){
+    const totalAct = actividadesScope.reduce((sum,a) => sum + (a.cantidad || 1), 0);
+    const minutosAct = actividadesScope.reduce((sum,a) => sum + (a.tiempo_minutos || 0), 0);
+    const productividad = kpis.resueltas + totalAct;
+    let nivPr = 'gris', fraseP = 'Suma de solicitudes resueltas y actividades administrativas registradas.';
+    if(bench && bench.productividadProm !== null){
+      nivPr = semComparativo(productividad, bench.productividadProm);
+      const comp = nivPr === 'verde' ? 'por encima del' : (nivPr === 'amarillo' ? 'cerca del' : 'por debajo del');
+      fraseP = `${comp} promedio del equipo (${redondear1(bench.productividadProm)}). Incluye ${kpis.resueltas} solicitudes resueltas y ${totalAct} actividades administrativas (${minutosAct} min).`;
+    }
+    cards.push(tarjetaKPI({
+      titulo: 'Productividad',
+      valorTexto: String(productividad),
+      nivel: nivPr,
+      frase: fraseP,
+      recomendacion: nivPr==='rojo' ? 'Podría valer la pena revisar su carga de trabajo o si necesita apoyo.' : (nivPr==='verde' ? 'Buen nivel de producción frente al resto del equipo.' : null),
+    }));
+  }
+
+  return `<div class="kpi-grid">${cards.join('')}</div>`;
+}
+
+/* ============================================================
+   Barra de estado (pendiente / en proceso / resuelto)
+============================================================ */
+function construirBarraEstado(kpis){
+  if(!kpis.total){
+    return '<p class="vacio-aviso">Todavía no hay solicitudes registradas en este ámbito.</p>';
+  }
+  const pct = n => Math.round((n / kpis.total) * 100);
+  return `
+    <div class="bar-track" style="height:26px;">
+      ${kpis.resueltas ? `<div class="bar-fill" style="width:${pct(kpis.resueltas)}%;background:var(--verde-ok);"></div>` : ''}
+      ${kpis.enProceso ? `<div class="bar-fill" style="width:${pct(kpis.enProceso)}%;background:var(--ochre-500);"></div>` : ''}
+      ${kpis.pendientes ? `<div class="bar-fill" style="width:${pct(kpis.pendientes)}%;background:var(--red-700);"></div>` : ''}
+    </div>
+    <div class="estado-legend">
+      <span><i style="background:var(--verde-ok);"></i>Resueltas: ${kpis.resueltas} (${pct(kpis.resueltas)}%)</span>
+      <span><i style="background:var(--ochre-500);"></i>En proceso: ${kpis.enProceso} (${pct(kpis.enProceso)}%)</span>
+      <span><i style="background:var(--red-700);"></i>Pendientes: ${kpis.pendientes} (${pct(kpis.pendientes)}%)</span>
+    </div>`;
+}
+
+/* ============================================================
+   Listas tipo barra: por programa / por funcionario
+============================================================ */
+function construirListaBarras(filas, { selectorDestino } = {}){
+  // filas: [{ etiqueta, eficacia, detalle, valorAmbito }]
+  if(!filas.length) return '<p class="vacio-aviso">No hay datos suficientes todavía.</p>';
+  return filas.map(f => {
+    const nivel = semEficacia(f.eficacia);
+    const color = nivel==='verde' ? 'var(--verde-ok)' : nivel==='amarillo' ? 'var(--ochre-500)' : nivel==='rojo' ? 'var(--red-700)' : 'var(--gris-na)';
+    const ancho = f.eficacia !== null ? Math.max(4, Math.round(f.eficacia)) : 4;
+    const drill = (selectorDestino && f.valorAmbito)
+      ? ` · <a class="drill-link" href="#" onclick="irAAmbito('${f.valorAmbito.replace(/'/g,"\\'")}');return false;">Ver detalle</a>`
+      : '';
+    return `
+      <div class="bar-row">
+        <div class="bar-label">${f.etiqueta}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${ancho}%;background:${color};"></div></div>
+        <div class="bar-value">${f.detalle}${drill}</div>
+      </div>`;
+  }).join('');
+}
+
+function irAAmbito(valor){
+  const sel = document.getElementById('sel-ambito');
+  if([...sel.options].some(o => o.value === valor)){
+    sel.value = valor;
+    renderDashboard();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+/* ============================================================
+   Render principal
+============================================================ */
+function renderDashboard(){
+  const ambito = obtenerAmbito();
+  const kpis = calcularKPIs(ambito.solicitudesScope, ambito.encuestasScope);
+  const bench = (ambito.esIndividual) ? calcularBenchProductividad() : null;
+
+  let html = '';
+  html += `<div class="seccion"><h2>${ambito.etiqueta}</h2>`;
+  html += `<p class="seccion-sub">Indicadores calculados sobre lo que tienes registrado en este ámbito.</p>`;
+  html += construirKPIs(kpis, { conProductividad: !ambito.esPrograma, actividadesScope: ambito.actividadesScope, bench });
+  html += `</div>`;
+
+  html += `<div class="seccion"><h2>Solicitudes por estado</h2>`;
+  html += construirBarraEstado(kpis);
+  html += `</div>`;
+
+  html += `<div class="seccion"><h2>Resumen en palabras simples</h2>`;
+  html += `<div class="resumen-texto">${construirResumenTexto(ambito, kpis)}</div>`;
+  html += `</div>`;
+
+  if(!ambito.esIndividual && !ambito.esPrograma){
+    // vista general: desglose por programa
+    const programasVisibles = [...new Set(ambito.solicitudesScope.map(s => s.programa).filter(Boolean))];
+    const filasPrograma = programasVisibles.map(p => {
+      const deEsePrograma = ambito.solicitudesScope.filter(s => s.programa === p);
+      const resueltasP = deEsePrograma.filter(s => s.estado === 'resuelto').length;
+      const eficaciaP = deEsePrograma.length ? (resueltasP / deEsePrograma.length * 100) : null;
+      return {
+        etiqueta: p,
+        eficacia: eficaciaP,
+        detalle: `${resueltasP}/${deEsePrograma.length} (${eficaciaP!==null ? redondear1(eficaciaP) : 0}%)`,
+        valorAmbito: 'programa:' + p,
+      };
+    }).sort((a,b) => (b.eficacia ?? 0) - (a.eficacia ?? 0));
+    html += `<div class="seccion"><h2>Desempeño por programa</h2>`;
+    html += `<p class="seccion-sub">Porcentaje de solicitudes resueltas sobre el total recibido en cada programa.</p>`;
+    html += construirListaBarras(filasPrograma, { selectorDestino: true });
+    html += `</div>`;
+  }
+
+  if(!ambito.esIndividual){
+    // desglose por funcionario (disponible en general y en vista de programa)
+    const nombresVisibles = [...new Set(ambito.solicitudesScope.map(s => s.atendido_por).filter(Boolean))];
+    const filasFunc = nombresVisibles.map(n => {
+      const deEseFunc = ambito.solicitudesScope.filter(s => s.atendido_por === n);
+      const resueltasF = deEseFunc.filter(s => s.estado === 'resuelto').length;
+      const eficaciaF = deEseFunc.length ? (resueltasF / deEseFunc.length * 100) : null;
+      return {
+        etiqueta: n,
+        eficacia: eficaciaF,
+        detalle: `${resueltasF}/${deEseFunc.length} (${eficaciaF!==null ? redondear1(eficaciaF) : 0}%)`,
+        valorAmbito: esCoordinador ? ('funcionario:' + n) : null,
+      };
+    }).sort((a,b) => (b.eficacia ?? 0) - (a.eficacia ?? 0));
+    if(filasFunc.length){
+      html += `<div class="seccion"><h2>Desempeño por funcionario</h2>`;
+      html += `<p class="seccion-sub">Solicitudes resueltas sobre el total atendido por cada funcionario, en este ámbito.</p>`;
+      html += construirListaBarras(filasFunc, { selectorDestino: esCoordinador });
+      html += `</div>`;
+    }
+  }
+
+  document.getElementById('dash-content').innerHTML = html;
+}
+
+function calcularBenchProductividad(){
+  // promedio de productividad (resueltas + actividades) entre todos los funcionarios visibles
+  const nombres = [...new Set([
+    ...solicitudesData.map(s => s.atendido_por).filter(Boolean),
+    ...actividadesData.map(a => funcionariosMap[a.funcionario_id]).filter(Boolean),
+  ])];
+  if(!nombres.length) return { productividadProm: null };
+  const valores = nombres.map(n => {
+    const resueltasN = solicitudesData.filter(s => s.atendido_por === n && s.estado === 'resuelto').length;
+    const id = nombreAId[n];
+    const actN = actividadesData.filter(a => a.funcionario_id === id).reduce((sum,a) => sum + (a.cantidad || 1), 0);
+    return resueltasN + actN;
+  });
+  return { productividadProm: promedioNum(valores) };
+}
+
+function construirResumenTexto(ambito, kpis){
+  if(!kpis.total){
+    return 'Todavía no hay solicitudes registradas en este ámbito, así que no es posible generar un análisis. Cuando se registren las primeras solicitudes, este resumen se irá completando automáticamente.';
+  }
+  const partes = [];
+  const nivEf = semEficacia(kpis.eficacia);
+  const nivTi = semTiempo(kpis.tiempoProm);
+  const nivSa = semSatisfaccion(kpis.satisfaccion);
+
+  partes.push(`De las ${kpis.total} solicitudes de este ámbito, se han resuelto ${kpis.resueltas} (${redondear1(kpis.eficacia)}%).`);
+
+  if(nivEf === 'rojo' || nivTi === 'rojo' || nivSa === 'rojo'){
+    partes.push('Hay al menos un indicador en rojo que conviene atender pronto — revisa las tarjetas de arriba para ver cuál y qué se recomienda hacer.');
+  }else if(nivEf === 'amarillo' || nivTi === 'amarillo' || nivSa === 'amarillo'){
+    partes.push('En general la gestión va razonablemente bien, aunque hay algún indicador en amarillo con espacio para mejorar.');
+  }else{
+    partes.push('Los tres indicadores principales (eficacia, tiempo de respuesta y satisfacción) están en buen nivel. Buen trabajo.');
+  }
+
+  if(kpis.satisfaccion === null){
+    partes.push('Todavía no hay encuestas de satisfacción respondidas en este ámbito; a medida que los ciudadanos las contesten, este dato se irá completando.');
+  }
+
+  return partes.join(' ');
+}
+</script>
+</body>
+</html>

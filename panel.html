@@ -266,6 +266,7 @@
       <button class="btn-ghost" id="btn-apariencia" style="display:none;">🎨 Apariencia</button>
       <button class="btn-ghost" id="btn-avisos" style="display:none;">📅 Días sin atención</button>
       <button class="btn-ghost" id="btn-actividades" style="display:none;">📋 Registrar actividad</button>
+      <a class="btn-ghost" id="btn-dashboard" href="dashboard.html" style="display:none;text-decoration:none;">📈 Indicadores</a>
       <button class="btn-ghost" id="btn-exportar-excel" style="display:none;">📊 Exportar a Excel</button>
       <button class="btn-ghost" id="btn-borrar-prueba" style="display:none;color:var(--red-700);border-color:var(--red-700);">🗑️ Borrar datos de prueba</button>
       <button class="btn-presencial" id="btn-presencial" style="display:none;">➕ Atención presencial</button>
@@ -571,7 +572,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-07-9';
+const APP_VERSION = '2026-10-07-11';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -674,6 +675,7 @@ async function afterLogin(){
   document.getElementById('btn-logout').style.display = 'inline-block';
   document.getElementById('btn-presencial').style.display = 'inline-block';
   document.getElementById('btn-actividades').style.display = 'inline-block';
+  document.getElementById('btn-dashboard').style.display = 'inline-block';
   document.getElementById('btn-exportar-excel').style.display = 'inline-block';
   if(user.email === 'orejuelaaguiarjhonatan@gmail.com'){
     document.getElementById('btn-borrar-prueba').style.display = 'inline-block';
@@ -1338,6 +1340,21 @@ async function exportarExcel(){
       sb.from('encuestas_satisfaccion').select('*').order('created_at', { ascending: true }),
       sb.from('perfiles_funcionario').select('id, nombre'),
     ]);
+    // Si alguna consulta falla (por ejemplo por permisos), antes quedaba en
+    // silencio y esa hoja salía vacía. Ahora lo dejamos ver en la consola y
+    // se lo avisamos a quien exporta, para poder diagnosticarlo.
+    const erroresConsulta = [
+      ['solicitudes', solRes.error],
+      ['actividades_administrativas', actRes.error],
+      ['encuestas_satisfaccion', encRes.error],
+      ['perfiles_funcionario', perfRes.error],
+    ].filter(([, err]) => err);
+    if(erroresConsulta.length){
+      erroresConsulta.forEach(([tabla, err]) => console.error('Error consultando', tabla, err));
+      alert('No se pudieron leer algunos datos (' + erroresConsulta.map(([t])=>t).join(', ') + '). Revisa la consola (F12) para el detalle. El Excel se generará solo con lo que sí se pudo leer.');
+    }
+    console.log('Filas leídas → solicitudes:', (solRes.data||[]).length, '· actividades:', (actRes.data||[]).length, '· encuestas:', (encRes.data||[]).length);
+
     const solicitudesData = solRes.data || [];
     const actividadesData = actRes.data || [];
     const encuestasData = encRes.data || [];
