@@ -12,6 +12,8 @@
     --green-900:#163a2f;
     --green-700:#1f4b3f;
     --green-600:#2b5f4f;
+    --azul-inst:#1F4E79;
+    --azul-inst-600:#2a63a0;
     --ochre-600:#b5812a;
     --ochre-500:#c98a2b;
     --ochre-100:#f3e4c6;
@@ -148,9 +150,9 @@
     transition:transform .12s ease, background .15s ease;
   }
   .btn:active{transform:translateY(1px);}
-  .btn-primary{background:var(--green-700);color:var(--white);}
-  .btn-primary:hover{background:var(--green-600);}
-  .btn-ghost{background:transparent;color:var(--green-700);border:1.5px solid var(--green-700);}
+  .btn-primary{background:var(--azul-inst);color:var(--white);}
+  .btn-primary:hover{background:var(--azul-inst-600);}
+  .btn-ghost{background:transparent;color:var(--azul-inst);border:1.5px solid var(--azul-inst);}
   .btn-ghost:hover{background:var(--paper-dim);}
 
   .offices{
@@ -160,10 +162,15 @@
     margin:0 0 50px;
   }
   .office-card{
-    background:var(--white);padding:18px 16px;
+    background:var(--white);display:flex;flex-direction:column;
   }
-  .office-card .tag{font-size:11px;color:var(--ochre-600);font-weight:600;}
-  .office-card h3{font-size:16px;margin-top:6px;}
+  .office-card .tag{
+    background:var(--azul-inst);color:var(--white);
+    font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+    padding:8px 16px;
+  }
+  .office-card .body{padding:14px 16px 18px;}
+  .office-card h3{font-size:16px;margin-top:0;}
   .office-card p{font-size:13px;color:var(--ink-soft);margin-top:6px;line-height:1.45;}
 
   footer.site-footer{
@@ -473,43 +480,59 @@
     <div class="offices" role="list" aria-label="Programas de atención">
       <div class="office-card" role="listitem">
         <div class="tag">Programa</div>
-        <h3>Adulto Mayor</h3>
-        <p>Colombia Mayor, novedades y acompañamiento a la población adulta mayor.</p>
+        <div class="body">
+          <h3>Adulto Mayor</h3>
+          <p>Colombia Mayor, novedades y acompañamiento a la población adulta mayor.</p>
+        </div>
       </div>
       <div class="office-card" role="listitem">
         <div class="tag">Programa</div>
-        <h3>Discapacidad</h3>
-        <p>Registro de localización y caracterización, rutas de atención e inclusión.</p>
+        <div class="body">
+          <h3>Discapacidad</h3>
+          <p>Registro de localización y caracterización, rutas de atención e inclusión.</p>
+        </div>
       </div>
       <div class="office-card" role="listitem">
         <div class="tag">Programa</div>
-        <h3>Víctimas del Conflicto</h3>
-        <p>Atención, orientación y acompañamiento a la población víctima del conflicto armado.</p>
+        <div class="body">
+          <h3>Víctimas del Conflicto</h3>
+          <p>Atención, orientación y acompañamiento a la población víctima del conflicto armado.</p>
+        </div>
       </div>
       <div class="office-card" role="listitem">
         <div class="tag">Programa</div>
-        <h3>Comunidades Indígenas</h3>
-        <p>Atención y acompañamiento a los resguardos y comunidades indígenas del municipio.</p>
+        <div class="body">
+          <h3>Comunidades Indígenas</h3>
+          <p>Atención y acompañamiento a los resguardos y comunidades indígenas del municipio.</p>
+        </div>
       </div>
       <div class="office-card" role="listitem">
         <div class="tag">Programa</div>
-        <h3>Renta Ciudadana</h3>
-        <p>Inscripción, novedades y acompañamiento al programa de transferencias Renta Ciudadana.</p>
+        <div class="body">
+          <h3>Renta Ciudadana</h3>
+          <p>Inscripción, novedades y acompañamiento al programa de transferencias Renta Ciudadana.</p>
+        </div>
       </div>
       <div class="office-card" role="listitem">
         <div class="tag">Programa</div>
-        <h3>Renta Joven</h3>
-        <p>Inscripción, novedades y acompañamiento al programa de transferencias Renta Joven.</p>
+        <div class="body">
+          <h3>Renta Joven</h3>
+          <p>Inscripción, novedades y acompañamiento al programa de transferencias Renta Joven.</p>
+        </div>
       </div>
       <div class="office-card" role="listitem">
         <div class="tag">Programa</div>
-        <h3>Devolución del IVA</h3>
-        <p>Inscripción, novedades y acompañamiento al programa de compensación del IVA.</p>
+        <div class="body">
+          <h3>Devolución del IVA</h3>
+          <p>Inscripción, novedades y acompañamiento al programa de compensación del IVA.</p>
+        </div>
       </div>
       <div class="office-card" role="listitem">
         <div class="tag">PQR</div>
-        <h3>Peticiones, Quejas, Reclamos, Sugerencias y Denuncias</h3>
-        <p>¿Tienes una petición, queja, reclamo, sugerencia o denuncia sobre la atención recibida? Radícala aquí mismo.</p>
+        <div class="body">
+          <h3>Peticiones, Quejas, Reclamos, Sugerencias y Denuncias</h3>
+          <p>¿Tienes una petición, queja, reclamo, sugerencia o denuncia sobre la atención recibida? Radícala aquí mismo.</p>
+        </div>
       </div>
     </div>
   </main>
@@ -707,7 +730,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-07-19';
+const APP_VERSION = '2026-10-07-20';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
