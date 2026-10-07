@@ -266,6 +266,7 @@
       <button class="btn-ghost" id="btn-apariencia" style="display:none;">🎨 Apariencia</button>
       <button class="btn-ghost" id="btn-avisos" style="display:none;">📅 Días sin atención</button>
       <button class="btn-ghost" id="btn-actividades" style="display:none;">📋 Registrar actividad</button>
+      <button class="btn-ghost" id="btn-borrar-prueba" style="display:none;color:var(--red-700);border-color:var(--red-700);">🗑️ Borrar datos de prueba</button>
       <button class="btn-presencial" id="btn-presencial" style="display:none;">➕ Atención presencial</button>
       <button class="btn-ghost" id="btn-logout" style="display:none;">Cerrar sesión</button>
     </div>
@@ -380,6 +381,23 @@
 
     <div class="modal-actions">
       <button class="btn-cancel" id="btn-actividades-cerrar">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-borrar-prueba-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-borrar-prueba-title">
+  <div class="modal-card">
+    <h2 id="modal-borrar-prueba-title" style="color:var(--red-700);">⚠️ Borrar datos de prueba</h2>
+    <p class="modal-sub">Esto borra <strong>definitivamente</strong>, para todos los programas: todas las solicitudes (chatbot y presencial), sus encuestas de satisfacción, y toda la bitácora de actividades administrativas. También reinicia la numeración de radicados, para que el próximo vuelva a empezar en 0001. No se puede deshacer.</p>
+    <p class="modal-sub">No borra: los usuarios/funcionarios, la apariencia del encabezado, ni los días sin atención programados.</p>
+    <div class="field">
+      <label for="bp-confirmacion">Escribe <strong>BORRAR TODO</strong> para confirmar</label>
+      <input type="text" id="bp-confirmacion" placeholder="BORRAR TODO" autocomplete="off">
+    </div>
+    <div class="modal-msg" id="bp-msg" role="status" aria-live="polite"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btn-borrar-prueba-cancelar">Cancelar</button>
+      <button class="btn-save" id="btn-borrar-prueba-confirmar" style="background:var(--red-700);" disabled>Borrar definitivamente</button>
     </div>
   </div>
 </div>
@@ -551,7 +569,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-07-5';
+const APP_VERSION = '2026-10-07-6';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -654,6 +672,9 @@ async function afterLogin(){
   document.getElementById('btn-logout').style.display = 'inline-block';
   document.getElementById('btn-presencial').style.display = 'inline-block';
   document.getElementById('btn-actividades').style.display = 'inline-block';
+  if(user.email === 'orejuelaaguiarjhonatan@gmail.com'){
+    document.getElementById('btn-borrar-prueba').style.display = 'inline-block';
+  }
   if(esCoordinador){
     document.getElementById('btn-avisos').style.display = 'inline-block';
     document.getElementById('btn-apariencia').style.display = 'inline-block';
@@ -1223,6 +1244,47 @@ async function agregarActividad(){
 async function eliminarActividad(id){
   await sb.from('actividades_administrativas').delete().eq('id', id);
   await cargarActividades();
+}
+
+/* ============================================================
+   Borrar datos de prueba (solo cuenta del desarrollador)
+============================================================ */
+document.getElementById('btn-borrar-prueba').addEventListener('click', abrirModalBorrarPrueba);
+document.getElementById('btn-borrar-prueba-cancelar').addEventListener('click', cerrarModalBorrarPrueba);
+document.getElementById('btn-borrar-prueba-confirmar').addEventListener('click', ejecutarBorrarPrueba);
+document.getElementById('modal-borrar-prueba-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'modal-borrar-prueba-overlay') cerrarModalBorrarPrueba();
+});
+document.getElementById('bp-confirmacion').addEventListener('input', (e)=>{
+  document.getElementById('btn-borrar-prueba-confirmar').disabled = e.target.value.trim() !== 'BORRAR TODO';
+});
+
+function abrirModalBorrarPrueba(){
+  document.getElementById('bp-confirmacion').value = '';
+  document.getElementById('btn-borrar-prueba-confirmar').disabled = true;
+  document.getElementById('bp-msg').textContent = '';
+  document.getElementById('modal-borrar-prueba-overlay').classList.add('open');
+}
+
+function cerrarModalBorrarPrueba(){
+  document.getElementById('modal-borrar-prueba-overlay').classList.remove('open');
+}
+
+async function ejecutarBorrarPrueba(){
+  const msg = document.getElementById('bp-msg');
+  const btn = document.getElementById('btn-borrar-prueba-confirmar');
+  btn.disabled = true;
+  msg.textContent = 'Borrando…';
+  const { error } = await sb.rpc('borrar_datos_prueba');
+  if(error){
+    msg.textContent = 'Error al borrar: ' + error.message;
+    btn.disabled = false;
+    return;
+  }
+  msg.textContent = 'Listo, todo quedó limpio.';
+  await loadSolicitudes();
+  renderDetail();
+  setTimeout(cerrarModalBorrarPrueba, 1200);
 }
 
 /* ============================================================
