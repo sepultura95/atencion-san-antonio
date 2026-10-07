@@ -241,6 +241,19 @@
   .chip.chip-continue{border-color:var(--ochre-500);color:var(--ochre-600);font-weight:700;}
   .chip.chip-continue:hover{background:var(--ochre-500);color:var(--white);}
 
+  .quick-replies.rating-mode{flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:8px;}
+  .chip.chip-rating{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+    padding:11px 14px;border-radius:10px;font-size:15px;border-width:1.5px;
+  }
+  .chip-rating .num{
+    display:inline-flex;align-items:center;justify-content:center;flex:none;
+    width:28px;height:28px;border-radius:50%;background:var(--green-700);color:var(--white);
+    font-size:13.5px;font-weight:700;
+  }
+  .chip-rating:hover .num, .chip-rating:focus .num{background:var(--white);color:var(--green-700);}
+  .chip-rating .label{flex:1;font-weight:600;}
+
   .chat-input{
     display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);background:var(--white);flex:none;
   }
@@ -689,7 +702,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-07-2';
+const APP_VERSION = '2026-10-07-3';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -911,12 +924,12 @@ function mostrarPreguntaEncuesta(){
   }
   const p = SERVQUAL_PREGUNTAS[encuestaDraft.paso];
   addMsg(p.texto, 'bot');
-  setChips([
-    {label:'1 · Muy insatisfecho', value:'1'},
-    {label:'2', value:'2'},
-    {label:'3', value:'3'},
-    {label:'4', value:'4'},
-    {label:'5 · Muy satisfecho', value:'5'},
+  setRatingChips([
+    {label:'Muy insatisfecho', value:'1'},
+    {label:'Insatisfecho', value:'2'},
+    {label:'Neutral', value:'3'},
+    {label:'Satisfecho', value:'4'},
+    {label:'Muy satisfecho', value:'5'},
   ]);
 }
 
@@ -1040,11 +1053,35 @@ function addMsg(text, who, archivo, radicadoDestacado){
 
 function setChips(options){
   const chips = document.getElementById('chat-chips');
+  chips.classList.remove('rating-mode');
   chips.innerHTML = '';
   options.forEach(opt=>{
     const b = document.createElement('button');
     b.className = 'chip';
     b.textContent = opt.label;
+    b.onclick = () => handleChip(opt.value);
+    chips.appendChild(b);
+  });
+}
+
+/* Botones grandes, apilados y con número + texto, para que la calificación
+   de la encuesta sea clara y fácil de tocar en celular. */
+function setRatingChips(options){
+  const chips = document.getElementById('chat-chips');
+  chips.classList.add('rating-mode');
+  chips.innerHTML = '';
+  options.forEach(opt=>{
+    const b = document.createElement('button');
+    b.className = 'chip chip-rating';
+    b.setAttribute('aria-label', opt.value + ' - ' + opt.label);
+    const num = document.createElement('span');
+    num.className = 'num';
+    num.textContent = opt.value;
+    const label = document.createElement('span');
+    label.className = 'label';
+    label.textContent = opt.label;
+    b.appendChild(num);
+    b.appendChild(label);
     b.onclick = () => handleChip(opt.value);
     chips.appendChild(b);
   });
