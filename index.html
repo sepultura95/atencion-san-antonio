@@ -150,11 +150,14 @@
   .hero-actions{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap;}
   .hero-feature{
     background:var(--white);border:1px solid var(--line);border-radius:8px;overflow:hidden;
-    display:flex;flex-direction:column;
+    display:flex;flex-direction:column;position:relative;
   }
   .hero-feature img, .hero-feature video, .hero-feature iframe{
     width:100%;aspect-ratio:4/3;object-fit:cover;display:block;border:0;background:var(--paper-dim);
   }
+  .hero-feature .hf-dots{position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:6px;}
+  .hero-feature .hf-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.6);}
+  .hero-feature .hf-dot.active{background:#fff;}
   .hero-feature .hf-body{padding:12px 14px;}
   .hero-feature .hf-tag{font-size:10.5px;font-weight:700;color:var(--azul-inst);text-transform:uppercase;letter-spacing:.05em;}
   .hero-feature .hf-titulo{font-size:14px;font-weight:700;margin-top:4px;line-height:1.3;}
@@ -747,13 +750,67 @@ function urlVideoEmbed(url){
   return null;
 }
 
-function renderHeroFeature(data){
+let heroImgs = [];
+let heroImgIndex = 0;
+let heroImgTimer = null;
+
+async function cargarHeroImagenes(){
+  try{
+    const { data, error } = await sb.from('hero_imagenes').select('*').order('orden', { ascending: true });
+    heroImgs = error ? [] : (data || []);
+  }catch(e){ heroImgs = []; }
+}
+
+function renderHeroImagenSlide(){
+  const box = document.getElementById('hero-feature');
+  if(!box || heroImgs.length === 0) return;
+  heroImgIndex = ((heroImgIndex % heroImgs.length) + heroImgs.length) % heroImgs.length;
+  const img = heroImgs[heroImgIndex];
+  const px = img.pos_x ?? 50, py = img.pos_y ?? 50, z = (img.zoom ?? 100) / 100;
+  const tieneTexto = img.titulo || img.texto;
+  box.innerHTML = `
+    <img src="${img.url}" alt="${escapeHtml(img.titulo || 'Imagen destacada')}" style="object-position:${px}% ${py}%;transform:scale(${z});">
+    ${tieneTexto ? `<div class="hf-body">
+      ${img.titulo ? `<div class="hf-titulo">${escapeHtml(img.titulo)}</div>` : ''}
+      ${img.texto ? `<div class="hf-texto">${escapeHtml(img.texto)}</div>` : ''}
+    </div>` : ''}
+    ${heroImgs.length > 1 ? `<div class="hf-dots">${heroImgs.map((_,i)=>`<span class="hf-dot${i===heroImgIndex?' active':''}"></span>`).join('')}</div>` : ''}
+  `;
+}
+
+function iniciarRotacionHero(){
+  if(heroImgTimer){ clearInterval(heroImgTimer); heroImgTimer = null; }
+  if(heroImgs.length <= 1) return;
+  heroImgTimer = setInterval(() => {
+    heroImgIndex = (heroImgIndex + 1) % heroImgs.length;
+    renderHeroImagenSlide();
+  }, 5000);
+}
+
+async function renderHeroFeature(data){
   const box = document.getElementById('hero-feature');
   const grid = document.getElementById('hero-grid');
   if(!box || !grid) return;
+  if(heroImgTimer){ clearInterval(heroImgTimer); heroImgTimer = null; }
   const tipo = data.destacado_tipo;
-  const tieneContenido = tipo === 'imagen' ? !!data.destacado_url
-    : tipo === 'video' ? !!data.destacado_url
+
+  if(tipo === 'imagen'){
+    await cargarHeroImagenes();
+    if(heroImgs.length === 0){
+      box.style.display = 'none';
+      box.innerHTML = '';
+      grid.classList.add('sin-destacado');
+      return;
+    }
+    heroImgIndex = 0;
+    box.style.display = 'flex';
+    grid.classList.remove('sin-destacado');
+    renderHeroImagenSlide();
+    iniciarRotacionHero();
+    return;
+  }
+
+  const tieneContenido = tipo === 'video' ? !!data.destacado_url
     : tipo === 'noticia' ? !!(data.destacado_titulo || data.destacado_texto)
     : false;
   if(!tieneContenido){
@@ -763,9 +820,7 @@ function renderHeroFeature(data){
     return;
   }
   let media = '';
-  if(tipo === 'imagen'){
-    media = `<img src="${data.destacado_url}" alt="${escapeHtml(data.destacado_titulo || 'Imagen destacada')}">`;
-  } else if(tipo === 'video'){
+  if(tipo === 'video'){
     const embed = urlVideoEmbed(data.destacado_url);
     media = embed
       ? `<iframe src="${embed}" title="${escapeHtml(data.destacado_titulo || 'Video destacado')}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`
@@ -799,7 +854,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-07-23';
+const APP_VERSION = '2026-10-07-24';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){

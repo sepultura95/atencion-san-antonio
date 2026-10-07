@@ -342,14 +342,20 @@
       <p style="font-size:11.5px;color:var(--ink-soft);margin:4px 0 8px;">Muestra una imagen, un video o una noticia corta en la página principal, al lado del título.</p>
       <select id="dest-tipo" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:13px;">
         <option value="">Ninguno</option>
-        <option value="imagen">Imagen</option>
+        <option value="imagen">Imágenes (hasta 10, van rotando solas)</option>
         <option value="video">Video (enlace de YouTube, Vimeo o .mp4)</option>
         <option value="noticia">Noticia (solo texto)</option>
       </select>
 
-      <div id="dest-campo-imagen" style="display:none;margin-top:10px;">
-        <label style="font-size:11.5px;color:var(--ink-soft);">Imagen (PNG, JPG o WEBP, hasta 2 MB)</label><br>
-        <input type="file" id="dest-imagen-file" accept="image/png,image/jpeg,image/webp">
+      <div id="dest-campo-imagenes" style="display:none;margin-top:12px;">
+        <p style="font-size:11.5px;color:var(--ink-soft);margin:0 0 8px;">Cada imagen puede moverse, achicarse o agrandarse, y llevar su propio texto. La página las va cambiando sola, una por una.</p>
+        <div id="dest-img-lista" style="display:flex;flex-direction:column;gap:12px;"></div>
+        <div style="margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;">
+          <label style="font-size:11.5px;color:var(--ink-soft);">Agregar otra imagen (PNG, JPG o WEBP, hasta 2 MB)</label><br>
+          <input type="file" id="dest-imagen-file-nueva" accept="image/png,image/jpeg,image/webp" style="margin-top:4px;">
+          <button class="btn-small" id="btn-dest-imagen-agregar" style="background:var(--green-700);color:#fff;margin-top:6px;display:block;">Agregar imagen</button>
+          <div id="dest-img-msg" style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;"></div>
+        </div>
       </div>
       <div id="dest-campo-video" style="display:none;margin-top:10px;">
         <label style="font-size:11.5px;color:var(--ink-soft);">Enlace del video (YouTube, Vimeo o archivo .mp4)</label>
@@ -635,7 +641,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-07-23';
+const APP_VERSION = '2026-10-07-24';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -1058,6 +1064,7 @@ document.getElementById('btn-ap-fondo-quitar').addEventListener('click', ()=>qui
 document.getElementById('dest-tipo').addEventListener('change', actualizarCamposDestacado);
 document.getElementById('btn-dest-guardar').addEventListener('click', guardarDestacado);
 document.getElementById('btn-dest-quitar').addEventListener('click', quitarDestacado);
+document.getElementById('btn-dest-imagen-agregar').addEventListener('click', agregarImagenDestacada);
 document.getElementById('btn-ap-logo-guardar-pos').addEventListener('click', guardarPosicionLogo);
 document.getElementById('btn-ap-fondo-guardar-pos').addEventListener('click', guardarPosicionFondo);
 
@@ -1140,10 +1147,11 @@ async function abrirModalApariencia(){
 
   const destTipo = apConfigActual.destacado_tipo || '';
   document.getElementById('dest-tipo').value = destTipo;
-  document.getElementById('dest-imagen-file').value = '';
+  document.getElementById('dest-imagen-file-nueva').value = '';
+  document.getElementById('dest-img-msg').textContent = '';
   document.getElementById('dest-video-url').value = destTipo === 'video' ? (apConfigActual.destacado_url || '') : '';
-  document.getElementById('dest-titulo').value = apConfigActual.destacado_titulo || '';
-  document.getElementById('dest-texto').value = apConfigActual.destacado_texto || '';
+  document.getElementById('dest-titulo').value = destTipo !== 'imagen' ? (apConfigActual.destacado_titulo || '') : '';
+  document.getElementById('dest-texto').value = destTipo !== 'imagen' ? (apConfigActual.destacado_texto || '') : '';
   actualizarCamposDestacado();
 
   document.getElementById('modal-apariencia-overlay').classList.add('open');
@@ -1155,9 +1163,11 @@ function cerrarModalApariencia(){
 
 function actualizarCamposDestacado(){
   const tipo = document.getElementById('dest-tipo').value;
-  document.getElementById('dest-campo-imagen').style.display = tipo === 'imagen' ? 'block' : 'none';
+  document.getElementById('dest-campo-imagenes').style.display = tipo === 'imagen' ? 'block' : 'none';
   document.getElementById('dest-campo-video').style.display = tipo === 'video' ? 'block' : 'none';
-  document.getElementById('dest-campo-texto').style.display = tipo ? 'block' : 'none';
+  document.getElementById('dest-campo-texto').style.display = (tipo === 'video' || tipo === 'noticia') ? 'block' : 'none';
+  document.getElementById('btn-dest-guardar').style.display = tipo === 'imagen' ? 'none' : 'inline-block';
+  if(tipo === 'imagen') cargarListaImagenesPanel();
 }
 
 async function guardarDestacado(){
@@ -1178,24 +1188,7 @@ async function guardarDestacado(){
   const texto = document.getElementById('dest-texto').value.trim();
   let url = null;
 
-  if(tipo === 'imagen'){
-    const file = document.getElementById('dest-imagen-file').files[0];
-    if(file){
-      if(file.size > MAX_IMG_BYTES){ msg.textContent = 'La imagen pesa más de 2 MB.'; return; }
-      msg.textContent = 'Subiendo imagen…';
-      const ext = file.name.split('.').pop();
-      const ruta = 'destacado-' + Date.now() + '.' + ext;
-      const { error: upErr } = await sb.storage.from('branding').upload(ruta, file, { upsert: true });
-      if(upErr){ msg.textContent = 'Error al subir: ' + upErr.message; return; }
-      const { data: pub } = sb.storage.from('branding').getPublicUrl(ruta);
-      url = pub.publicUrl;
-    } else if(apConfigActual.destacado_tipo === 'imagen' && apConfigActual.destacado_url){
-      url = apConfigActual.destacado_url;
-    } else {
-      msg.textContent = 'Elige una imagen para subir.';
-      return;
-    }
-  } else if(tipo === 'video'){
+  if(tipo === 'video'){
     url = document.getElementById('dest-video-url').value.trim();
     if(!url){ msg.textContent = 'Pega el enlace del video.'; return; }
   } else if(tipo === 'noticia'){
@@ -1218,7 +1211,119 @@ async function guardarDestacado(){
 async function quitarDestacado(){
   document.getElementById('dest-tipo').value = '';
   actualizarCamposDestacado();
+  await sb.from('hero_imagenes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await guardarDestacado();
+}
+
+/* ---------- Imágenes del destacado (carrusel) ---------- */
+let destImagenesActual = [];
+
+async function cargarListaImagenesPanel(){
+  const wrap = document.getElementById('dest-img-lista');
+  wrap.innerHTML = '<div class="empty-state">Cargando…</div>';
+  const { data, error } = await sb.from('hero_imagenes').select('*').order('orden', { ascending: true });
+  if(error){ wrap.innerHTML = '<div class="empty-state">No se pudo cargar la lista.</div>'; return; }
+  destImagenesActual = data || [];
+  if(destImagenesActual.length === 0){
+    wrap.innerHTML = '<div class="empty-state">Todavía no has agregado imágenes.</div>';
+    return;
+  }
+  wrap.innerHTML = destImagenesActual.map((img, i) => `
+    <div style="border:1px solid var(--line);border-radius:8px;padding:10px;" data-img-id="${img.id}">
+      <div style="display:flex;gap:10px;">
+        <div style="width:72px;height:54px;border-radius:4px;overflow:hidden;flex:none;background:var(--paper-dim);">
+          <img src="${img.url}" style="width:100%;height:100%;object-fit:cover;object-position:${img.pos_x}% ${img.pos_y}%;transform:scale(${img.zoom/100});">
+        </div>
+        <div style="flex:1;min-width:0;">
+          <input type="text" class="dest-img-titulo" placeholder="Título (opcional)" value="${escapeHtml(img.titulo || '')}" style="width:100%;padding:6px;border:1px solid var(--line);border-radius:5px;font-size:12.5px;margin-bottom:4px;">
+          <input type="text" class="dest-img-texto" placeholder="Texto (opcional)" value="${escapeHtml(img.texto || '')}" style="width:100%;padding:6px;border:1px solid var(--line);border-radius:5px;font-size:12.5px;">
+        </div>
+      </div>
+      <div style="margin-top:8px;">
+        <label style="font-size:10.5px;color:var(--ink-soft);">Mover — horizontal</label>
+        <input type="range" class="dest-img-posx" min="0" max="100" value="${img.pos_x}" style="width:100%;">
+        <label style="font-size:10.5px;color:var(--ink-soft);">Mover — vertical</label>
+        <input type="range" class="dest-img-posy" min="0" max="100" value="${img.pos_y}" style="width:100%;">
+        <label style="font-size:10.5px;color:var(--ink-soft);">Tamaño (acercar / alejar)</label>
+        <input type="range" class="dest-img-zoom" min="100" max="250" value="${img.zoom}" style="width:100%;">
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-small dest-img-guardar" style="background:var(--ochre-600);color:#fff;">Guardar ajustes</button>
+        ${i > 0 ? `<button class="btn-small dest-img-subir-orden" style="background:var(--paper-dim);">↑ Antes</button>` : ''}
+        ${i < destImagenesActual.length - 1 ? `<button class="btn-small dest-img-bajar-orden" style="background:var(--paper-dim);">↓ Después</button>` : ''}
+        <button class="btn-small dest-img-eliminar" style="background:var(--red-700);color:#fff;">Eliminar</button>
+      </div>
+    </div>
+  `).join('');
+
+  wrap.querySelectorAll('[data-img-id]').forEach(card => {
+    const id = card.dataset.imgId;
+    card.querySelector('.dest-img-guardar').addEventListener('click', () => guardarAjustesImagenDestacada(id, card));
+    card.querySelector('.dest-img-eliminar').addEventListener('click', () => eliminarImagenDestacada(id));
+    const subirBtn = card.querySelector('.dest-img-subir-orden');
+    if(subirBtn) subirBtn.addEventListener('click', () => moverOrdenImagenDestacada(id, -1));
+    const bajarBtn = card.querySelector('.dest-img-bajar-orden');
+    if(bajarBtn) bajarBtn.addEventListener('click', () => moverOrdenImagenDestacada(id, 1));
+  });
+}
+
+async function guardarAjustesImagenDestacada(id, card){
+  const msg = document.getElementById('dest-img-msg');
+  const titulo = card.querySelector('.dest-img-titulo').value.trim();
+  const texto = card.querySelector('.dest-img-texto').value.trim();
+  const pos_x = parseInt(card.querySelector('.dest-img-posx').value, 10);
+  const pos_y = parseInt(card.querySelector('.dest-img-posy').value, 10);
+  const zoom = parseInt(card.querySelector('.dest-img-zoom').value, 10);
+  const { error } = await sb.from('hero_imagenes').update({
+    titulo: titulo || null, texto: texto || null, pos_x, pos_y, zoom
+  }).eq('id', id);
+  msg.textContent = error ? ('Error: ' + error.message) : 'Ajustes guardados ✓';
+  await cargarListaImagenesPanel();
+}
+
+async function eliminarImagenDestacada(id){
+  await sb.from('hero_imagenes').delete().eq('id', id);
+  await cargarListaImagenesPanel();
+}
+
+async function moverOrdenImagenDestacada(id, direccion){
+  const idx = destImagenesActual.findIndex(i => i.id === id);
+  const otroIdx = idx + direccion;
+  if(idx < 0 || otroIdx < 0 || otroIdx >= destImagenesActual.length) return;
+  const a = destImagenesActual[idx], b = destImagenesActual[otroIdx];
+  await sb.from('hero_imagenes').update({ orden: b.orden }).eq('id', a.id);
+  await sb.from('hero_imagenes').update({ orden: a.orden }).eq('id', b.id);
+  await cargarListaImagenesPanel();
+}
+
+async function agregarImagenDestacada(){
+  const msg = document.getElementById('dest-img-msg');
+  const inputFile = document.getElementById('dest-imagen-file-nueva');
+  const file = inputFile.files[0];
+  if(!file){ msg.textContent = 'Elige una imagen primero.'; return; }
+  if(destImagenesActual.length >= 10){ msg.textContent = 'Ya hay 10 imágenes, el máximo permitido. Elimina alguna para agregar otra.'; return; }
+  if(file.size > MAX_IMG_BYTES){ msg.textContent = 'La imagen pesa más de 2 MB.'; return; }
+  msg.textContent = 'Subiendo…';
+  const ext = file.name.split('.').pop();
+  const ruta = 'hero-' + Date.now() + '.' + ext;
+  const { error: upErr } = await sb.storage.from('branding').upload(ruta, file, { upsert: true });
+  if(upErr){ msg.textContent = 'Error al subir: ' + upErr.message; return; }
+  const { data: pub } = sb.storage.from('branding').getPublicUrl(ruta);
+  const maxOrden = destImagenesActual.reduce((m, i) => Math.max(m, i.orden ?? 0), -1);
+  const { error: insErr } = await sb.from('hero_imagenes').insert({
+    url: pub.publicUrl, pos_x: 50, pos_y: 50, zoom: 100, orden: maxOrden + 1
+  });
+  if(insErr){ msg.textContent = 'Error al guardar: ' + insErr.message; return; }
+  if(!apConfigActual || apConfigActual.destacado_tipo !== 'imagen'){
+    await sb.from('configuracion_sitio').update({
+      destacado_tipo: 'imagen', destacado_url: null, destacado_titulo: null, destacado_texto: null,
+      updated_at: new Date().toISOString()
+    }).eq('id', 1);
+    apConfigActual.destacado_tipo = 'imagen';
+  }
+  inputFile.value = '';
+  msg.textContent = 'Imagen agregada ✓';
+  await cargarListaImagenesPanel();
 }
 
 async function subirImagenApariencia(campo, inputFile){
