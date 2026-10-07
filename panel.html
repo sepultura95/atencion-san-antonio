@@ -127,15 +127,22 @@
   .staff-shell.active{display:grid;grid-template-columns:340px 1fr;gap:0;height:calc(100vh - 66px);}
   .req-list{border-right:1px solid var(--line);background:var(--white);overflow-y:auto;}
   .req-list .filters{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:6px;flex-wrap:wrap;}
-  .req-list .programas{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:6px;flex-wrap:wrap;background:var(--paper-dim);}
+  .req-list .programas{padding:12px 14px 14px;border-bottom:1px solid var(--line);background:var(--paper-dim);}
+  .programas-label{font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px;}
+  .programas-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
   .chip-filter{
     font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--ink-soft);
   }
   .chip-filter.active{background:var(--green-700);color:var(--white);border-color:var(--green-700);}
   .chip-programa{
-    font-size:12px;padding:5px 10px;border:1px solid var(--ochre-500);border-radius:999px;background:var(--white);color:var(--ochre-600);font-weight:600;
+    font-size:12.5px;padding:7px 10px;border:1.5px solid var(--ochre-500);border-radius:8px;
+    background:var(--white);color:var(--ink);font-weight:600;text-align:center;line-height:1.25;
+    transition:background .12s ease,border-color .12s ease;
   }
-  .chip-programa.active{background:var(--ochre-500);color:var(--white);}
+  .chip-programa:hover{background:var(--ochre-100);}
+  .chip-programa.active{background:var(--ochre-500);border-color:var(--ochre-500);color:var(--white);}
+  .chip-programa[data-v="todas"]{grid-column:1 / -1;background:var(--white);}
+  .chip-programa[data-v="todas"].active{background:var(--green-700);border-color:var(--green-700);color:var(--white);}
   .req-item{
     padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;
   }
@@ -572,7 +579,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-07-15';
+const APP_VERSION = '2026-10-07-17';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -613,7 +620,7 @@ let solicitudes = [];       // cache de lo que la RLS deja ver
 let filtroEstado = 'todas';
 let filtroPrograma = 'todas';
 let selectedId = null;
-const PROGRAMAS = ['Adulto Mayor','Discapacidad','Víctimas del Conflicto','Comunidades Indígenas','Renta Ciudadana','Renta Joven','Devolución del IVA'];
+const PROGRAMAS = ['Adulto Mayor','Discapacidad','Víctimas del Conflicto','Comunidades Indígenas','Renta Ciudadana','Renta Joven','Devolución del IVA','PQR'];
 
 /* ---------- Arranque: revisa si ya hay sesión activa ---------- */
 (async function boot(){
@@ -716,9 +723,11 @@ function suscribirCambiosSolicitudes(){
 function renderProgramas(listaProgramas){
   const wrap = document.getElementById('programas');
   const opts = [['todas','Todos mis programas'], ...listaProgramas.map(p => [p,p])];
-  wrap.innerHTML = opts.map(([v,l]) =>
-    `<button class="chip-programa${filtroPrograma===v?' active':''}" data-v="${escapeHtml(v)}">${escapeHtml(l)}</button>`
-  ).join('');
+  wrap.innerHTML = '<p class="programas-label">Filtrar por programa</p><div class="programas-grid">' +
+    opts.map(([v,l]) =>
+      `<button class="chip-programa${filtroPrograma===v?' active':''}" data-v="${escapeHtml(v)}">${escapeHtml(l)}</button>`
+    ).join('') +
+    '</div>';
   wrap.querySelectorAll('.chip-programa').forEach(btn=>{
     btn.addEventListener('click', ()=>{ filtroPrograma = btn.dataset.v; selectedId = null; renderProgramas(listaProgramas); renderList(); renderDetail(); });
   });

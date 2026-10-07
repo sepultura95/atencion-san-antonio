@@ -506,6 +506,11 @@
         <h3>Devolución del IVA</h3>
         <p>Inscripción, novedades y acompañamiento al programa de compensación del IVA.</p>
       </div>
+      <div class="office-card" role="listitem">
+        <div class="tag">PQR</div>
+        <h3>Peticiones, Quejas, Reclamos, Sugerencias y Denuncias</h3>
+        <p>¿Tienes una petición, queja, reclamo, sugerencia o denuncia sobre la atención recibida? Radícala aquí mismo.</p>
+      </div>
     </div>
   </main>
   <footer class="site-footer">
@@ -702,7 +707,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-07-15';
+const APP_VERSION = '2026-10-07-17';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -982,15 +987,17 @@ async function finalizarEncuesta(comentario){
   setChips([{label:'Volver al menú', value:'MENU'}]);
 }
 
-const CONTEXTO_ASISTENTE = "Eres el asistente virtual de la Oficina de Programas Sociales de la Alcaldía de San Antonio, Tolima (Colombia). Atiendes únicamente los programas: Adulto Mayor (Colombia Mayor), Discapacidad (Registro de Localización y Caracterización de Personas con Discapacidad), Víctimas del Conflicto Armado, Comunidades Indígenas, Renta Ciudadana, Renta Joven y Devolución del IVA. Responde en español, en 3 o 4 frases como máximo, en tono cálido, claro y cercano a personas que pueden tener bajo nivel de alfabetización digital. No inventes fechas, cifras, montos ni requisitos legales que no conozcas con certeza: si la pregunta necesita un dato preciso o la revisión de un caso particular, dile a la persona que lo mejor es radicar una solicitud para que un funcionario le responda con exactitud. Si la pregunta no tiene nada que ver con estos programas ni con la atención municipal, indica amablemente que solo puedes ayudar con temas de Programas Sociales de San Antonio, Tolima.";
+const CONTEXTO_ASISTENTE = "Eres el asistente virtual de la Oficina de Programas Sociales de la Alcaldía de San Antonio, Tolima (Colombia). Atiendes únicamente los programas: Adulto Mayor (Colombia Mayor), Discapacidad (Registro de Localización y Caracterización de Personas con Discapacidad), Víctimas del Conflicto Armado, Comunidades Indígenas, Renta Ciudadana, Renta Joven y Devolución del IVA, además del módulo de PQR (Peticiones, Quejas, Reclamos, Sugerencias y Denuncias sobre la atención recibida). Responde en español, en 3 o 4 frases como máximo, en tono cálido, claro y cercano a personas que pueden tener bajo nivel de alfabetización digital. No inventes fechas, cifras, montos ni requisitos legales que no conozcas con certeza: si la pregunta necesita un dato preciso o la revisión de un caso particular, dile a la persona que lo mejor es radicar una solicitud para que un funcionario le responda con exactitud. Si la pregunta no tiene nada que ver con estos programas ni con la atención municipal, indica amablemente que solo puedes ayudar con temas de Programas Sociales de San Antonio, Tolima.";
 
 async function initSample(){
   try{ sampleFn = await claude.use('sample'); }
   catch(e){ sampleFn = null; }
 }
 
-const OFICINAS = ['Adulto Mayor','Discapacidad','Víctimas del Conflicto','Comunidades Indígenas','Renta Ciudadana','Renta Joven','Devolución del IVA'];
-const TIPOS = ['Trámite','Petición','Queja','Reclamo','Sugerencia','Denuncia'];
+const OFICINAS = ['Adulto Mayor','Discapacidad','Víctimas del Conflicto','Comunidades Indígenas','Renta Ciudadana','Renta Joven','Devolución del IVA','PQR'];
+const TIPOS_PROGRAMA = ['Trámite','Petición'];
+const TIPOS_PQR = ['Petición','Queja','Reclamo','Sugerencia','Denuncia'];
+function tiposPara(oficina){ return oficina === 'PQR' ? TIPOS_PQR : TIPOS_PROGRAMA; }
 
 function toggleChat(){
   const panel = document.getElementById('chat-panel');
@@ -1250,7 +1257,7 @@ function handleChip(value){
 function goTramites(){
   chatState = 'TRAMITES';
   hideTextInput();
-  addMsg('Estos son los programas de atención y sus trámites más solicitados:\n\n• Adulto Mayor: inscripción y novedades de Colombia Mayor.\n• Discapacidad: registro de localización y caracterización, rutas de atención.\n• Víctimas del Conflicto: orientación, atención y acompañamiento.\n• Comunidades Indígenas: atención y acompañamiento a resguardos y comunidades.\n• Renta Ciudadana: inscripción y novedades del programa.\n• Renta Joven: inscripción y novedades del programa.\n• Devolución del IVA: inscripción y novedades del programa.', 'bot');
+  addMsg('Estos son los programas de atención y sus trámites más solicitados:\n\n• Adulto Mayor: inscripción y novedades de Colombia Mayor.\n• Discapacidad: registro de localización y caracterización, rutas de atención.\n• Víctimas del Conflicto: orientación, atención y acompañamiento.\n• Comunidades Indígenas: atención y acompañamiento a resguardos y comunidades.\n• Renta Ciudadana: inscripción y novedades del programa.\n• Renta Joven: inscripción y novedades del programa.\n• Devolución del IVA: inscripción y novedades del programa.\n• PQR: peticiones, quejas, reclamos, sugerencias o denuncias sobre la atención recibida.', 'bot');
   setChips([{label:'Volver al menú', value:'VOLVER'}]);
 }
 
@@ -1264,8 +1271,8 @@ function goRadicarOficina(directoAFuncionario){
 
 function goRadicarTipo(){
   chatState = 'RADICAR_TIPO';
-  addMsg('¿Qué tipo de solicitud es?', 'bot');
-  setChips(TIPOS.map(t=>({label:t, value:t})));
+  addMsg(draft.oficina === 'PQR' ? '¿Qué deseas radicar?' : '¿Qué tipo de solicitud es?', 'bot');
+  setChips(tiposPara(draft.oficina).map(t=>({label:t, value:t})));
 }
 
 function goRadicarNombre(){
