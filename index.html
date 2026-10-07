@@ -152,10 +152,15 @@
     background:var(--white);border:1px solid var(--line);border-radius:8px;overflow:hidden;
     display:flex;flex-direction:column;position:relative;
   }
-  .hero-feature img, .hero-feature video, .hero-feature iframe{
+  .hero-feature video, .hero-feature iframe{
     width:100%;aspect-ratio:4/3;object-fit:cover;display:block;border:0;background:var(--paper-dim);
   }
-  .hero-feature img{object-fit:contain;transform-origin:center center;}
+  .hero-feature .hf-media{
+    width:100%;aspect-ratio:4/3;overflow:hidden;position:relative;background:var(--paper-dim);
+  }
+  .hero-feature .hf-media img{
+    width:100%;height:100%;object-fit:contain;display:block;border:0;transform-origin:center center;
+  }
   .hero-feature .hf-dots{position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:6px;}
   .hero-feature .hf-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.6);}
   .hero-feature .hf-dot.active{background:#fff;}
@@ -770,7 +775,7 @@ function renderHeroImagenSlide(){
   const px = img.pos_x ?? 50, py = img.pos_y ?? 50, z = (img.zoom ?? 100) / 100;
   const tieneTexto = img.titulo || img.texto;
   box.innerHTML = `
-    <img src="${img.url}" alt="${escapeHtml(img.titulo || 'Imagen destacada')}" style="object-position:${px}% ${py}%;transform:scale(${z});">
+    <div class="hf-media"><img src="${img.url}" alt="${escapeHtml(img.titulo || 'Imagen destacada')}" style="object-position:${px}% ${py}%;transform:scale(${z});"></div>
     ${tieneTexto ? `<div class="hf-body">
       ${img.titulo ? `<div class="hf-titulo">${escapeHtml(img.titulo)}</div>` : ''}
       ${img.texto ? `<div class="hf-texto">${escapeHtml(img.texto)}</div>` : ''}
@@ -855,7 +860,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-07-27';
+const APP_VERSION = '2026-10-07-28';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
