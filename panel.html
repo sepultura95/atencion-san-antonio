@@ -265,6 +265,7 @@
       </div>
       <button class="btn-ghost" id="btn-apariencia" style="display:none;">🎨 Apariencia</button>
       <button class="btn-ghost" id="btn-avisos" style="display:none;">📅 Días sin atención</button>
+      <button class="btn-ghost" id="btn-actividades" style="display:none;">📋 Registrar actividad</button>
       <button class="btn-presencial" id="btn-presencial" style="display:none;">➕ Atención presencial</button>
       <button class="btn-ghost" id="btn-logout" style="display:none;">Cerrar sesión</button>
     </div>
@@ -328,6 +329,57 @@
     <div class="modal-msg" id="ap-msg" role="status" aria-live="polite"></div>
     <div class="modal-actions">
       <button class="btn-cancel" id="btn-apariencia-cerrar">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-actividades-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-actividades-title">
+  <div class="modal-card">
+    <h2 id="modal-actividades-title">Registrar actividad administrativa</h2>
+    <p class="modal-sub">Actas, oficios, foliación, resoluciones, decretos, comités, reuniones, visitas... todo lo que no pasa por el chatbot, para medir la carga real de trabajo.</p>
+
+    <div class="field">
+      <label for="act-tipo">Tipo de actividad</label>
+      <select id="act-tipo">
+        <option value="Acta de reunión">Acta de reunión</option>
+        <option value="Oficio o respuesta">Oficio o respuesta</option>
+        <option value="Foliación y archivo">Foliación y archivo</option>
+        <option value="Visita domiciliaria o de campo">Visita domiciliaria o de campo</option>
+        <option value="Resolución">Resolución</option>
+        <option value="Decreto">Decreto</option>
+        <option value="Comité">Comité</option>
+        <option value="Reunión con la comunidad">Reunión con la comunidad</option>
+        <option value="Otro">Otro</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="act-descripcion">Descripción breve (opcional)</label>
+      <input type="text" id="act-descripcion" placeholder="Ej: Acta comité de Renta Ciudadana">
+    </div>
+    <div class="modal-row2">
+      <div class="field">
+        <label for="act-cantidad">Cantidad</label>
+        <input type="number" id="act-cantidad" min="1" value="1">
+      </div>
+      <div class="field">
+        <label for="act-minutos">Minutos dedicados (opcional)</label>
+        <input type="number" id="act-minutos" min="1" placeholder="Ej: 30">
+      </div>
+    </div>
+    <div class="field">
+      <label for="act-fecha">Fecha</label>
+      <input type="date" id="act-fecha">
+    </div>
+    <div class="modal-actions" style="justify-content:flex-start;">
+      <button class="btn-save" id="btn-actividades-agregar">Guardar</button>
+    </div>
+    <div class="modal-msg" id="act-msg" role="status" aria-live="polite"></div>
+
+    <h3 style="font-size:13.5px;margin:18px 0 8px;color:var(--ink-soft);">Mis actividades recientes</h3>
+    <div id="actividades-lista" style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;"></div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btn-actividades-cerrar">Cerrar</button>
     </div>
   </div>
 </div>
@@ -499,7 +551,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-07-4';
+const APP_VERSION = '2026-10-07-5';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -601,6 +653,7 @@ async function afterLogin(){
   document.getElementById('login-wrap').style.display = 'none';
   document.getElementById('btn-logout').style.display = 'inline-block';
   document.getElementById('btn-presencial').style.display = 'inline-block';
+  document.getElementById('btn-actividades').style.display = 'inline-block';
   if(esCoordinador){
     document.getElementById('btn-avisos').style.display = 'inline-block';
     document.getElementById('btn-apariencia').style.display = 'inline-block';
@@ -1091,6 +1144,85 @@ async function agregarAviso(){
 async function eliminarAviso(id){
   await sb.from('avisos_no_laborales').delete().eq('id', id);
   await cargarAvisos();
+}
+
+/* ============================================================
+   Bitácora de actividades administrativas (actas, oficios, foliación,
+   resoluciones, decretos, comités, reuniones, visitas...)
+============================================================ */
+document.getElementById('btn-actividades').addEventListener('click', abrirModalActividades);
+document.getElementById('btn-actividades-cerrar').addEventListener('click', cerrarModalActividades);
+document.getElementById('btn-actividades-agregar').addEventListener('click', agregarActividad);
+document.getElementById('modal-actividades-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'modal-actividades-overlay') cerrarModalActividades();
+});
+
+async function abrirModalActividades(){
+  document.getElementById('act-tipo').value = 'Acta de reunión';
+  document.getElementById('act-descripcion').value = '';
+  document.getElementById('act-cantidad').value = '1';
+  document.getElementById('act-minutos').value = '';
+  document.getElementById('act-fecha').value = new Date().toISOString().slice(0,10);
+  document.getElementById('act-msg').textContent = '';
+  await cargarActividades();
+  document.getElementById('modal-actividades-overlay').classList.add('open');
+}
+
+function cerrarModalActividades(){
+  document.getElementById('modal-actividades-overlay').classList.remove('open');
+}
+
+async function cargarActividades(){
+  const wrap = document.getElementById('actividades-lista');
+  const { data, error } = await sb.from('actividades_administrativas')
+    .select('*')
+    .eq('funcionario_id', perfil.id)
+    .order('fecha', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(15);
+  if(error){ wrap.innerHTML = '<div class="empty-state">No se pudo cargar la lista.</div>'; return; }
+  if(!data || data.length === 0){ wrap.innerHTML = '<div class="empty-state">Todavía no has registrado actividades.</div>'; return; }
+  wrap.innerHTML = data.map(a => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;">
+      <div>
+        <div style="font-weight:600;font-size:13px;">${escapeHtml(a.tipo)}${a.cantidad > 1 ? ' (x' + a.cantidad + ')' : ''}</div>
+        <div style="font-size:12px;color:var(--ink-soft);">${escapeHtml(a.fecha)}${a.tiempo_minutos ? ' · ' + a.tiempo_minutos + ' min' : ''}${a.descripcion ? ' · ' + escapeHtml(a.descripcion) : ''}</div>
+      </div>
+      <button class="btn-small" style="background:var(--red-700);color:#fff;" onclick="eliminarActividad('${a.id}')">Eliminar</button>
+    </div>
+  `).join('');
+}
+
+async function agregarActividad(){
+  const tipo = document.getElementById('act-tipo').value;
+  const descripcion = document.getElementById('act-descripcion').value.trim();
+  const cantidad = parseInt(document.getElementById('act-cantidad').value, 10) || 1;
+  const minutosVal = document.getElementById('act-minutos').value;
+  const tiempo_minutos = minutosVal ? parseInt(minutosVal, 10) : null;
+  const fecha = document.getElementById('act-fecha').value;
+  const msg = document.getElementById('act-msg');
+  if(!fecha){ msg.textContent = 'Elige una fecha.'; return; }
+  if(cantidad < 1){ msg.textContent = 'La cantidad debe ser al menos 1.'; return; }
+  msg.textContent = 'Guardando…';
+  const { error } = await sb.from('actividades_administrativas').insert({
+    funcionario_id: perfil.id,
+    tipo,
+    descripcion: descripcion || null,
+    cantidad,
+    tiempo_minutos,
+    fecha,
+  });
+  if(error){ msg.textContent = 'Error al guardar: ' + error.message; return; }
+  msg.textContent = 'Actividad guardada ✓';
+  document.getElementById('act-descripcion').value = '';
+  document.getElementById('act-cantidad').value = '1';
+  document.getElementById('act-minutos').value = '';
+  await cargarActividades();
+}
+
+async function eliminarActividad(id){
+  await sb.from('actividades_administrativas').delete().eq('id', id);
+  await cargarActividades();
 }
 
 /* ============================================================
