@@ -641,7 +641,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-07-25';
+const APP_VERSION = '2026-10-07-26';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -1237,6 +1237,7 @@ async function cargarListaImagenesPanel(){
         <div style="flex:1;min-width:0;">
           <input type="text" class="dest-img-titulo" placeholder="Título (opcional)" value="${escapeHtml(img.titulo || '')}" style="width:100%;padding:6px;border:1px solid var(--line);border-radius:5px;font-size:12.5px;margin-bottom:4px;">
           <input type="text" class="dest-img-texto" placeholder="Texto (opcional)" value="${escapeHtml(img.texto || '')}" style="width:100%;padding:6px;border:1px solid var(--line);border-radius:5px;font-size:12.5px;">
+          <p style="font-size:10.5px;color:var(--ink-soft);margin:4px 0 0;">El título y el texto se guardan solos al salir del campo.</p>
         </div>
       </div>
       <div style="margin-top:8px;">
@@ -1248,7 +1249,7 @@ async function cargarListaImagenesPanel(){
         <input type="range" class="dest-img-zoom" min="40" max="250" value="${img.zoom}" style="width:100%;">
       </div>
       <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn-small dest-img-guardar" style="background:var(--ochre-600);color:#fff;">Guardar ajustes</button>
+        <button class="btn-small dest-img-guardar" style="background:var(--ochre-600);color:#fff;">Guardar posición y tamaño</button>
         ${i > 0 ? `<button class="btn-small dest-img-subir-orden" style="background:var(--paper-dim);">↑ Antes</button>` : ''}
         ${i < destImagenesActual.length - 1 ? `<button class="btn-small dest-img-bajar-orden" style="background:var(--paper-dim);">↓ Después</button>` : ''}
         <button class="btn-small dest-img-eliminar" style="background:var(--red-700);color:#fff;">Eliminar</button>
@@ -1276,6 +1277,12 @@ async function cargarListaImagenesPanel(){
     ['dest-img-posx','dest-img-posy','dest-img-zoom'].forEach(cls => {
       card.querySelector('.' + cls).addEventListener('input', actualizarPreview);
     });
+
+    // El título y el texto se guardan solos al salir del campo, para que no
+    // se pierdan si alguien olvida pulsar "Guardar ajustes".
+    const autoguardarTexto = () => guardarAjustesImagenDestacada(id, card);
+    card.querySelector('.dest-img-titulo').addEventListener('change', autoguardarTexto);
+    card.querySelector('.dest-img-texto').addEventListener('change', autoguardarTexto);
   });
 }
 
