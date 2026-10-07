@@ -689,7 +689,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-06-3';
+const APP_VERSION = '2026-10-07-2';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -875,7 +875,99 @@ let chatState = 'MENU';
 let draft = {}; // in-progress solicitud fields
 let lastRadicado = null;
 let lastConsultaId = null;
+let lastConsultaRadicadoLegible = null;
+let encuestaDraft = null;
 let sampleFn = null;
+
+/* Encuesta de satisfacción (modelo SERVQUAL simplificado: 1 pregunta de
+   percepción por cada una de las 5 dimensiones, escala 1-5) */
+const SERVQUAL_PREGUNTAS = [
+  { campo:'tangibles', texto:'¿Qué tan clara y fácil de usar te pareció esta plataforma para hacer tu solicitud?' },
+  { campo:'fiabilidad', texto:'¿La respuesta que recibiste resolvió realmente lo que necesitabas?' },
+  { campo:'capacidad_respuesta', texto:'¿Qué tan oportuno (a tiempo) te pareció el tiempo de respuesta?' },
+  { campo:'seguridad', texto:'¿El funcionario mostró conocimiento y confianza al atender tu caso?' },
+  { campo:'empatia', texto:'¿Sentiste un trato amable y personalizado durante la atención?' },
+];
+
+async function existeEncuesta(solicitudId){
+  try{
+    const { data, error } = await sb.rpc('existe_encuesta', { p_solicitud_id: solicitudId });
+    if(error){ console.error(error); return true; } // si falla la verificación, mejor no insistir
+    return !!data;
+  }catch(e){ console.error(e); return true; }
+}
+
+function iniciarEncuestaSatisfaccion(solicitudId, radicadoLegible){
+  encuestaDraft = { solicitudId, radicadoLegible, paso: 0 };
+  chatState = 'ENCUESTA';
+  hideTextInput();
+  addMsg('Para terminar, ¿nos ayudas calificando la atención que recibiste? Son solo 5 preguntas rápidas y un comentario opcional.', 'bot');
+  mostrarPreguntaEncuesta();
+}
+
+function mostrarPreguntaEncuesta(){
+  if(encuestaDraft.paso >= SERVQUAL_PREGUNTAS.length){
+    return mostrarComentarioEncuesta();
+  }
+  const p = SERVQUAL_PREGUNTAS[encuestaDraft.paso];
+  addMsg(p.texto, 'bot');
+  setChips([
+    {label:'1 · Muy insatisfecho', value:'1'},
+    {label:'2', value:'2'},
+    {label:'3', value:'3'},
+    {label:'4', value:'4'},
+    {label:'5 · Muy satisfecho', value:'5'},
+  ]);
+}
+
+function responderEncuesta(valor){
+  const p = SERVQUAL_PREGUNTAS[encuestaDraft.paso];
+  encuestaDraft[p.campo] = parseInt(valor, 10);
+  addMsg(valor, 'user');
+  encuestaDraft.paso++;
+  mostrarPreguntaEncuesta();
+}
+
+function mostrarComentarioEncuesta(){
+  chatState = 'ENCUESTA_COMENTARIO';
+  addMsg('¿Algo más que quieras contarnos sobre la atención? (opcional)', 'bot');
+  setChips([{label:'Omitir', value:'OMITIR_COMENTARIO'}]);
+  showTextInput('Escribe un comentario (opcional)');
+}
+
+async function finalizarEncuesta(comentario){
+  hideTextInput();
+  setChips([]);
+  addMsg('Enviando tu calificación…', 'system');
+  try{
+    const { error } = await sb.from('encuestas_satisfaccion').insert({
+      solicitud_id: encuestaDraft.solicitudId,
+      radicado_legible: encuestaDraft.radicadoLegible,
+      tangibles: encuestaDraft.tangibles,
+      fiabilidad: encuestaDraft.fiabilidad,
+      capacidad_respuesta: encuestaDraft.capacidad_respuesta,
+      seguridad: encuestaDraft.seguridad,
+      empatia: encuestaDraft.empatia,
+      comentario: comentario || null,
+    });
+    if(error){
+      if(error.code === '23505'){
+        addMsg('Parece que ya habías calificado esta atención. ¡Gracias de nuevo!', 'bot');
+      } else {
+        console.error(error);
+        addMsg('No pudimos guardar tu calificación en este momento. Gracias de todas formas por tu tiempo.', 'bot');
+      }
+    } else {
+      addMsg('¡Gracias por tu calificación! Nos ayuda a seguir mejorando la atención.', 'bot');
+    }
+  }catch(e){
+    console.error(e);
+    addMsg('No pudimos guardar tu calificación en este momento. Gracias de todas formas por tu tiempo.', 'bot');
+  }
+  encuestaDraft = null;
+  chatState = 'MENU';
+  setChips([{label:'Volver al menú', value:'MENU'}]);
+}
 
 const CONTEXTO_ASISTENTE = "Eres el asistente virtual de la Oficina de Programas Sociales de la Alcaldía de San Antonio, Tolima (Colombia). Atiendes únicamente los programas: Adulto Mayor (Colombia Mayor), Discapacidad (Registro de Localización y Caracterización de Personas con Discapacidad), Víctimas del Conflicto Armado, Comunidades Indígenas, Renta Ciudadana, Renta Joven y Devolución del IVA. Responde en español, en 3 o 4 frases como máximo, en tono cálido, claro y cercano a personas que pueden tener bajo nivel de alfabetización digital. No inventes fechas, cifras, montos ni requisitos legales que no conozcas con certeza: si la pregunta necesita un dato preciso o la revisión de un caso particular, dile a la persona que lo mejor es radicar una solicitud para que un funcionario le responda con exactitud. Si la pregunta no tiene nada que ver con estos programas ni con la atención municipal, indica amablemente que solo puedes ayudar con temas de Programas Sociales de San Antonio, Tolima.";
 
@@ -1087,6 +1179,21 @@ function handleChip(value){
     if(value==='ENVIAR_DOC' || value==='REINTENTAR_ADJUNTO'){ fileUploadContext = 'CONSULTA'; return chatFileInput.click(); }
     if(value==='MENU') return goMenu();
   }
+  if(chatState==='ENCUESTA_PROMPT'){
+    if(value==='ENCUESTA_SI') return iniciarEncuestaSatisfaccion(lastConsultaId, lastConsultaRadicadoLegible);
+    if(value==='ENCUESTA_NO'){
+      chatState = 'POST_CONSULTA';
+      addMsg('Entendido, gracias de todas formas.', 'bot');
+      setChips([{label:'📎 Enviar un documento', value:'ENVIAR_DOC'},{label:'Volver al menú', value:'MENU'}]);
+      return;
+    }
+  }
+  if(chatState==='ENCUESTA'){
+    if(['1','2','3','4','5'].includes(value)) return responderEncuesta(value);
+  }
+  if(chatState==='ENCUESTA_COMENTARIO'){
+    if(value==='OMITIR_COMENTARIO') return finalizarEncuesta(null);
+  }
 }
 
 function goTramites(){
@@ -1272,6 +1379,7 @@ async function mostrarEstado(textoIngresado){
   }
   const radicadoLegible = (await obtenerRadicadoLegible(radicado)) || formatoRadicado(radicado);
   lastConsultaId = radicado;
+  lastConsultaRadicadoLegible = radicadoLegible;
   const estadoLabel = {pendiente:'Pendiente', en_proceso:'En proceso', resuelto:'Resuelto', respondida:'Respondida'};
   let texto = `Tu solicitud (${s.programa} · ${s.tipo}) está "${estadoLabel[s.estado] || s.estado}".`;
   if(s.ultima_respuesta){
@@ -1290,6 +1398,15 @@ async function mostrarEstado(textoIngresado){
   adjuntosFuncionario.forEach(m => {
     addMsg('Documento enviado por el funcionario:', 'bot', m.archivo);
   });
+  if(s.estado === 'resuelto'){
+    const yaCalificada = await existeEncuesta(radicado);
+    if(!yaCalificada){
+      chatState = 'ENCUESTA_PROMPT';
+      addMsg('¿Quieres calificar la atención que recibiste? Solo toma un minuto.', 'bot');
+      setChips([{label:'Sí, calificar', value:'ENCUESTA_SI'},{label:'No, gracias', value:'ENCUESTA_NO'}]);
+      return;
+    }
+  }
   chatState = 'POST_CONSULTA';
   setChips([{label:'📎 Enviar un documento', value:'ENVIAR_DOC'},{label:'Volver al menú', value:'MENU'}]);
 }
@@ -1317,6 +1434,7 @@ function handleTextStep(val){
   }
   if(chatState==='RADICAR_DESCRIPCION'){ draft.descripcion = val; return goRadicarAdjunto(); }
   if(chatState==='CONSULTAR_RADICADO' || chatState==='CONSULTAR_RETRY'){ hideTextInput(); return mostrarEstado(val); }
+  if(chatState==='ENCUESTA_COMENTARIO'){ return finalizarEncuesta(val); }
 }
 
 /* ---------- Manejo del input de archivo (radicar y enviar adjunto adicional) ---------- */
