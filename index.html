@@ -171,10 +171,13 @@
   .btn-ghost:hover{background:var(--paper-dim);}
 
   .offices{
-    display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    display:grid;grid-template-columns:repeat(4,1fr);
     gap:1px;background:var(--line);
     border:1px solid var(--line);
     margin:0 0 50px;
+  }
+  @media (max-width:900px){
+    .offices{grid-template-columns:repeat(2,1fr);}
   }
   .office-card{
     background:var(--white);display:flex;flex-direction:column;
@@ -796,7 +799,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-07-22';
+const APP_VERSION = '2026-10-07-23';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
