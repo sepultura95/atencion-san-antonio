@@ -641,7 +641,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-07-26';
+const APP_VERSION = '2026-10-07-27';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -1217,6 +1217,7 @@ async function quitarDestacado(){
 
 /* ---------- Imágenes del destacado (carrusel) ---------- */
 let destImagenesActual = [];
+let destImgSaveTimers = {};
 
 async function cargarListaImagenesPanel(){
   const wrap = document.getElementById('dest-img-lista');
@@ -1237,7 +1238,7 @@ async function cargarListaImagenesPanel(){
         <div style="flex:1;min-width:0;">
           <input type="text" class="dest-img-titulo" placeholder="Título (opcional)" value="${escapeHtml(img.titulo || '')}" style="width:100%;padding:6px;border:1px solid var(--line);border-radius:5px;font-size:12.5px;margin-bottom:4px;">
           <input type="text" class="dest-img-texto" placeholder="Texto (opcional)" value="${escapeHtml(img.texto || '')}" style="width:100%;padding:6px;border:1px solid var(--line);border-radius:5px;font-size:12.5px;">
-          <p style="font-size:10.5px;color:var(--ink-soft);margin:4px 0 0;">El título y el texto se guardan solos al salir del campo.</p>
+          <p style="font-size:10.5px;color:var(--ink-soft);margin:4px 0 0;">El título y el texto se guardan solos mientras escribes.</p>
         </div>
       </div>
       <div style="margin-top:8px;">
@@ -1278,12 +1279,29 @@ async function cargarListaImagenesPanel(){
       card.querySelector('.' + cls).addEventListener('input', actualizarPreview);
     });
 
-    // El título y el texto se guardan solos al salir del campo, para que no
-    // se pierdan si alguien olvida pulsar "Guardar ajustes".
-    const autoguardarTexto = () => guardarAjustesImagenDestacada(id, card);
-    card.querySelector('.dest-img-titulo').addEventListener('change', autoguardarTexto);
-    card.querySelector('.dest-img-texto').addEventListener('change', autoguardarTexto);
+    // El título y el texto se guardan solos mientras se escribe (no hace
+    // falta salir del campo ni pulsar ningún botón), para que no se pierdan
+    // si alguien cambia de pestaña sin hacer clic fuera del campo primero.
+    const guardarTextoSilencioso = () => {
+      clearTimeout(destImgSaveTimers[id]);
+      destImgSaveTimers[id] = setTimeout(() => autoguardarTextoImagen(id, card), 600);
+    };
+    card.querySelector('.dest-img-titulo').addEventListener('input', guardarTextoSilencioso);
+    card.querySelector('.dest-img-texto').addEventListener('input', guardarTextoSilencioso);
   });
+}
+
+async function autoguardarTextoImagen(id, card){
+  const msg = document.getElementById('dest-img-msg');
+  const titulo = card.querySelector('.dest-img-titulo').value.trim();
+  const texto = card.querySelector('.dest-img-texto').value.trim();
+  const { error } = await sb.from('hero_imagenes').update({
+    titulo: titulo || null, texto: texto || null
+  }).eq('id', id);
+  if(error){ msg.textContent = 'Error al guardar: ' + error.message; return; }
+  msg.textContent = 'Guardado ✓';
+  const item = destImagenesActual.find(i => i.id === id);
+  if(item){ item.titulo = titulo || null; item.texto = texto || null; }
 }
 
 async function guardarAjustesImagenDestacada(id, card){
