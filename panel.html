@@ -499,7 +499,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-07-3';
+const APP_VERSION = '2026-10-07-4';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -616,6 +616,22 @@ async function afterLogin(){
   }
   renderFilters();
   await loadSolicitudes();
+  suscribirCambiosSolicitudes();
+}
+
+/* Tiempo real: en cuanto se radica, actualiza o cambia cualquier solicitud
+   (desde el chatbot, presencial u otro funcionario), refrescamos la lista
+   automáticamente, sin que el funcionario tenga que darle F5. */
+let canalSolicitudes = null;
+function suscribirCambiosSolicitudes(){
+  if(canalSolicitudes) return; // ya suscrito (evita duplicar si afterLogin se vuelve a llamar)
+  canalSolicitudes = sb
+    .channel('panel-solicitudes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'solicitudes' }, async () => {
+      await loadSolicitudes();
+      renderDetail();
+    })
+    .subscribe();
 }
 
 function renderProgramas(listaProgramas){

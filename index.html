@@ -702,7 +702,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-07-3';
+const APP_VERSION = '2026-10-07-4';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -1018,6 +1018,16 @@ function closeChat(){
   document.getElementById('chat-launcher').focus();
 }
 
+/* Baja el chat hasta el final. Se usa con requestAnimationFrame (y no solo
+   tras pintar el mensaje) porque los botones/la caja de texto que aparecen
+   después pueden encoger el área visible y tapar lo último escrito. */
+function scrollChatToBottom(){
+  const body = document.getElementById('chat-body');
+  if(!body) return;
+  body.scrollTop = body.scrollHeight;
+  requestAnimationFrame(() => { body.scrollTop = body.scrollHeight; });
+}
+
 function addMsg(text, who, archivo, radicadoDestacado){
   const body = document.getElementById('chat-body');
   const div = document.createElement('div');
@@ -1048,7 +1058,7 @@ function addMsg(text, who, archivo, radicadoDestacado){
     div.appendChild(a);
   }
   body.appendChild(div);
-  body.scrollTop = body.scrollHeight;
+  scrollChatToBottom();
 }
 
 function setChips(options){
@@ -1062,6 +1072,7 @@ function setChips(options){
     b.onclick = () => handleChip(opt.value);
     chips.appendChild(b);
   });
+  scrollChatToBottom();
 }
 
 /* Botones grandes, apilados y con número + texto, para que la calificación
@@ -1085,6 +1096,7 @@ function setRatingChips(options){
     b.onclick = () => handleChip(opt.value);
     chips.appendChild(b);
   });
+  scrollChatToBottom();
 }
 
 function showTextInput(placeholder, multiline){
@@ -1095,9 +1107,11 @@ function showTextInput(placeholder, multiline){
   input.value = '';
   input.focus();
   input.onkeydown = (e) => { if(e.key==='Enter'){ submitTextInput(); } };
+  scrollChatToBottom();
 }
 function hideTextInput(){
   document.getElementById('chat-input-row').style.display = 'none';
+  scrollChatToBottom();
 }
 
 function submitTextInput(){
@@ -1134,7 +1148,7 @@ function addTypingBubble(){
   div.className = 'msg bot typing';
   div.textContent = 'Escribiendo…';
   body.appendChild(div);
-  body.scrollTop = body.scrollHeight;
+  scrollChatToBottom();
   return div;
 }
 
