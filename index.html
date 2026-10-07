@@ -139,9 +139,9 @@
   }
 
   /* ---------- Citizen view ---------- */
-  .wrap{max-width:980px;margin:0 auto;padding:0 20px;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px;}
   .hero{padding:44px 0 30px;}
-  .hero-grid{display:grid;grid-template-columns:1fr 300px;gap:30px;align-items:start;}
+  .hero-grid{display:grid;grid-template-columns:1fr 420px;gap:36px;align-items:start;}
   .hero-grid.sin-destacado{grid-template-columns:1fr;}
   @media (max-width:760px){.hero-grid{grid-template-columns:1fr;}}
   .hero-text{min-width:0;}
@@ -796,7 +796,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-07-21';
+const APP_VERSION = '2026-10-07-22';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
