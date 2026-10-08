@@ -189,8 +189,13 @@
     .offices{grid-template-columns:repeat(2,1fr);}
   }
   .office-card{
-    background:var(--white);display:flex;flex-direction:column;
+    background:var(--white);display:flex;flex-direction:column;cursor:pointer;
+    transition:box-shadow .15s ease, transform .1s ease;
   }
+  .office-card:hover, .office-card:focus-visible{
+    box-shadow:inset 0 0 0 2px var(--azul-inst);outline:none;
+  }
+  .office-card:active{transform:scale(0.997);}
   .office-card .tag{
     background:var(--azul-inst);color:var(--white);
     font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
@@ -199,6 +204,42 @@
   .office-card .body{padding:14px 16px 18px;}
   .office-card h3{font-size:16px;margin-top:0;}
   .office-card p{font-size:13px;color:var(--ink-soft);margin-top:6px;line-height:1.45;}
+  .office-card .ver-mas{font-size:12.5px;color:var(--azul-inst);font-weight:700;margin-top:10px;}
+
+  /* ---- Ventana de información del programa ---- */
+  .info-overlay{
+    display:none;position:fixed;inset:0;background:rgba(39,36,32,0.55);z-index:400;
+    align-items:center;justify-content:center;padding:20px;
+  }
+  .info-overlay.open{display:flex;}
+  .info-box{
+    background:var(--white);border-radius:8px;max-width:640px;width:100%;
+    max-height:85vh;display:flex;flex-direction:column;overflow:hidden;
+    box-shadow:0 20px 60px rgba(0,0,0,0.25);
+  }
+  .info-box-head{
+    background:var(--azul-inst);color:var(--white);padding:18px 22px;
+    display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex:none;
+  }
+  .info-box-head .et{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;opacity:.85;}
+  .info-box-head h2{font-size:19px;margin:4px 0 0;line-height:1.3;}
+  .info-box-close{
+    background:rgba(255,255,255,0.18);border:none;color:#fff;width:30px;height:30px;border-radius:50%;
+    font-size:18px;line-height:1;cursor:pointer;flex:none;
+  }
+  .info-box-close:hover{background:rgba(255,255,255,0.3);}
+  .info-box-body{padding:20px 22px;overflow-y:auto;font-size:14px;line-height:1.55;color:var(--ink);}
+  .info-box-body p{margin:0 0 12px;}
+  .info-box-body ul{margin:0 0 12px;padding-left:20px;}
+  .info-box-body li{margin-bottom:6px;}
+  .info-box-body a{color:var(--azul-inst);}
+  .info-box-body .info-nota{
+    background:var(--paper-dim);border-left:3px solid var(--ochre-600,#b8860b);
+    padding:10px 14px;border-radius:4px;margin:0 0 14px;font-size:13px;color:var(--ink-soft);
+  }
+  .info-box-foot{
+    padding:14px 22px;border-top:1px solid var(--line);display:flex;gap:10px;flex-wrap:wrap;flex:none;
+  }
 
   footer.site-footer{
     border-top:1px solid var(--line);
@@ -510,60 +551,85 @@
     </div>
 
     <div class="offices" role="list" aria-label="Programas de atención">
-      <div class="office-card" role="listitem">
+      <div class="office-card" role="listitem" tabindex="0" onclick="abrirInfoPrograma('adulto_mayor')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirInfoPrograma('adulto_mayor')}">
         <div class="tag">Programa</div>
         <div class="body">
           <h3>Adulto Mayor</h3>
           <p>Colombia Mayor, novedades y acompañamiento a la población adulta mayor.</p>
+          <div class="ver-mas">Ver más →</div>
         </div>
       </div>
-      <div class="office-card" role="listitem">
+      <div class="office-card" role="listitem" tabindex="0" onclick="abrirInfoPrograma('discapacidad')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirInfoPrograma('discapacidad')}">
         <div class="tag">Programa</div>
         <div class="body">
           <h3>Discapacidad</h3>
           <p>Registro de localización y caracterización, rutas de atención e inclusión.</p>
+          <div class="ver-mas">Ver más →</div>
         </div>
       </div>
-      <div class="office-card" role="listitem">
+      <div class="office-card" role="listitem" tabindex="0" onclick="abrirInfoPrograma('victimas')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirInfoPrograma('victimas')}">
         <div class="tag">Programa</div>
         <div class="body">
           <h3>Víctimas del Conflicto</h3>
           <p>Atención, orientación y acompañamiento a la población víctima del conflicto armado.</p>
+          <div class="ver-mas">Ver más →</div>
         </div>
       </div>
-      <div class="office-card" role="listitem">
+      <div class="office-card" role="listitem" tabindex="0" onclick="abrirInfoPrograma('indigenas')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirInfoPrograma('indigenas')}">
         <div class="tag">Programa</div>
         <div class="body">
           <h3>Comunidades Indígenas</h3>
           <p>Atención y acompañamiento a los resguardos y comunidades indígenas del municipio.</p>
+          <div class="ver-mas">Ver más →</div>
         </div>
       </div>
-      <div class="office-card" role="listitem">
+      <div class="office-card" role="listitem" tabindex="0" onclick="abrirInfoPrograma('renta_ciudadana')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirInfoPrograma('renta_ciudadana')}">
         <div class="tag">Programa</div>
         <div class="body">
           <h3>Renta Ciudadana</h3>
           <p>Inscripción, novedades y acompañamiento al programa de transferencias Renta Ciudadana.</p>
+          <div class="ver-mas">Ver más →</div>
         </div>
       </div>
-      <div class="office-card" role="listitem">
+      <div class="office-card" role="listitem" tabindex="0" onclick="abrirInfoPrograma('renta_joven')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirInfoPrograma('renta_joven')}">
         <div class="tag">Programa</div>
         <div class="body">
           <h3>Renta Joven</h3>
           <p>Inscripción, novedades y acompañamiento al programa de transferencias Renta Joven.</p>
+          <div class="ver-mas">Ver más →</div>
         </div>
       </div>
-      <div class="office-card" role="listitem">
+      <div class="office-card" role="listitem" tabindex="0" onclick="abrirInfoPrograma('iva')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirInfoPrograma('iva')}">
         <div class="tag">Programa</div>
         <div class="body">
           <h3>Devolución del IVA</h3>
           <p>Inscripción, novedades y acompañamiento al programa de compensación del IVA.</p>
+          <div class="ver-mas">Ver más →</div>
         </div>
       </div>
-      <div class="office-card" role="listitem">
+      <div class="office-card" role="listitem" tabindex="0" onclick="abrirInfoPrograma('pqr')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirInfoPrograma('pqr')}">
         <div class="tag">PQR</div>
         <div class="body">
           <h3>Peticiones, Quejas, Reclamos, Sugerencias y Denuncias</h3>
           <p>¿Tienes una petición, queja, reclamo, sugerencia o denuncia sobre la atención recibida? Radícala aquí mismo.</p>
+          <div class="ver-mas">Ver más →</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-overlay" id="info-overlay" onclick="if(event.target===this) cerrarInfoPrograma()">
+      <div class="info-box" role="dialog" aria-modal="true" aria-labelledby="info-box-titulo">
+        <div class="info-box-head">
+          <div>
+            <div class="et" id="info-box-etiqueta">Programa</div>
+            <h2 id="info-box-titulo">Título</h2>
+          </div>
+          <button class="info-box-close" onclick="cerrarInfoPrograma()" aria-label="Cerrar">✕</button>
+        </div>
+        <div class="info-box-body" id="info-box-cuerpo"></div>
+        <div class="info-box-foot">
+          <button class="btn btn-primary" onclick="cerrarInfoPrograma(); openChat(); botStart('RADICAR')">Radicar una solicitud</button>
+          <button class="btn btn-ghost" onclick="cerrarInfoPrograma()">Cerrar</button>
         </div>
       </div>
     </div>
@@ -747,6 +813,180 @@ async function inicializarApariencia(){
 }
 inicializarApariencia();
 
+/* ============================================================
+   Ventana de información de cada programa (al hacer clic en
+   las tarjetas de la cuadrícula de abajo del hero).
+============================================================ */
+const PROGRAMAS_INFO = {
+  adulto_mayor: {
+    etiqueta: 'Programa',
+    titulo: 'Adulto Mayor',
+    html: `
+      <p><strong>Requisitos para acceder al programa de atención al adulto mayor</strong></p>
+      <p>Para solicitar la inscripción al programa dirigido a las personas adultas mayores, el interesado debe cumplir con los siguientes requisitos:</p>
+      <ul>
+        <li><strong>Nacionalidad:</strong> ser colombiano.</li>
+        <li><strong>Residencia:</strong> haber residido en el territorio nacional durante los últimos diez (10) años.</li>
+        <li><strong>Edad:</strong> tener mínimo 54 años si es mujer y 59 años si es hombre.</li>
+        <li><strong>Condiciones económicas:</strong> carecer de rentas o ingresos suficientes para subsistir, de acuerdo con los criterios de focalización establecidos para el programa y la clasificación del RUI, en el grupo A, B y C1.</li>
+      </ul>
+      <p><strong>¿Dónde realizar el trámite?</strong><br>Acérquese a la Oficina de Programas y Proyectos Sociales del municipio para recibir orientación sobre el proceso de inscripción y la documentación requerida.</p>
+    `
+  },
+  discapacidad: {
+    etiqueta: 'Programa',
+    titulo: 'Discapacidad',
+    html: `
+      <p><strong>Requisitos para solicitar la certificación de discapacidad</strong></p>
+      <p>La certificación de discapacidad es un trámite dirigido a las personas que requieren la valoración correspondiente para determinar si cumplen los criterios establecidos en la normativa vigente.</p>
+      <p><strong>¿Dónde realizar la solicitud?</strong><br>La persona interesada o su representante debe acudir a la Oficina de Programas y Proyectos Sociales del municipio y presentar los siguientes documentos:</p>
+      <p><strong>1. Copia de la historia clínica</strong></p>
+      <p>Debe contener:</p>
+      <ul>
+        <li>Diagnóstico o diagnósticos relacionados con la posible discapacidad.</li>
+        <li>Código o códigos CIE vigentes correspondientes a los diagnósticos.</li>
+        <li>Soportes de apoyo diagnóstico disponibles, como exámenes y otros resultados clínicos.</li>
+      </ul>
+      <p>La historia clínica debe ser expedida por el médico tratante de la red de la EPS o entidad adaptada correspondiente.</p>
+      <div class="info-nota">Importante: la historia clínica no tiene un tiempo de vigencia determinado para este trámite; sin embargo, debe contener la información clínica requerida para adelantar el proceso.</div>
+      <p><strong>2. Documento de identidad</strong></p>
+      <p>Presentar copia del documento de identidad de la persona que solicita la certificación, para efectos de identificación y gestión del trámite administrativo municipal.</p>
+    `
+  },
+  victimas: {
+    etiqueta: 'Programa',
+    titulo: 'Víctimas del Conflicto',
+    html: `
+      <p><strong>Trámites y servicios realizados por el Enlace de Víctimas</strong></p>
+      <p>El Enlace Municipal de Víctimas brinda orientación y apoyo a la población víctima en los siguientes trámites y servicios, a través de las plataformas y canales institucionales:</p>
+      <ul>
+        <li>Inclusión de menores de edad hijos de víctimas.</li>
+        <li>Actualización del tipo de documento.</li>
+        <li>Actualización de información relacionada con certificados de discapacidad.</li>
+        <li>Caracterización y actualización de la información de las víctimas.</li>
+        <li>Solicitud de atención humanitaria.</li>
+        <li>Orientación para la obtención gratuita de la libreta militar.</li>
+        <li>Orientación e información sobre los diferentes procesos y servicios dirigidos a la población víctima.</li>
+      </ul>
+      <p><strong>Obtención gratuita de la Libreta Militar para población víctima</strong></p>
+      <p>Las personas reconocidas como víctimas del conflicto armado pueden acceder al trámite de definición de su situación militar de acuerdo con la normativa vigente.</p>
+      <div class="info-nota">Importante: el trámite debe ser realizado personalmente por el usuario a través de la plataforma oficial de reclutamiento y definición de la situación militar.</div>
+      <p><strong>1. Acreditar la condición de víctima</strong><br>El ciudadano debe estar incluido en el Registro Único de Víctimas (RUV), o acreditar su condición mediante certificación expedida por la Unidad para las Víctimas.</p>
+      <p><strong>2. Verificar la situación militar</strong><br>Realizar la consulta y verificación del estado de la situación militar en la plataforma correspondiente.</p>
+      <p><strong>3. Registrarse como ciudadano exento</strong><br>Realizar el registro como ciudadano exento en la plataforma oficial de reclutamiento, de manera presencial o mediante la plataforma virtual.</p>
+      <p><strong>4. Diligenciar la información</strong><br>Ingresar y diligenciar la información solicitada, asegurándose de que los datos coincidan exactamente con el documento de identidad.</p>
+      <p><strong>5. Enviar la información</strong><br>Una vez diligenciado el formulario, verificar la información y realizar el envío.</p>
+      <p><strong>6. Activar la inscripción</strong><br>Revisar el correo electrónico registrado, el cual debe estar vigente y en uso, ya que allí se recibirá el enlace para activar la inscripción y continuar con el proceso.</p>
+      <p><strong>7. Ingresar nuevamente a la plataforma</strong><br>Utilizando el número de documento de identidad y la contraseña creada durante el registro.</p>
+      <p><strong>8. Seleccionar la causal correspondiente</strong><br>Seleccionar la causal establecida en la Ley 1861, correspondiente a la opción 12: Víctima del conflicto armado.</p>
+      <p><strong>9. Cargar la documentación requerida</strong></p>
+      <ul>
+        <li>Cédula de ciudadanía por ambas caras.</li>
+        <li>Fotografía en fondo azul, en traje formal y en formato JPG.</li>
+        <li>La fotografía debe tener un tamaño inferior a 200 KB.</li>
+        <li>El archivo de la fotografía debe estar identificado con el número de documento de identidad.</li>
+      </ul>
+      <p><strong>10. Verificar los documentos</strong><br>Verificar que todos los documentos hayan sido cargados correctamente y que sean legibles antes de finalizar el proceso.</p>
+      <p><strong>11. Informar al Enlace Municipal de Víctimas</strong><br>Una vez finalizado el proceso de inscripción, el joven deberá informar al Enlace Municipal de Víctimas, quien realizará la remisión de los datos correspondientes al profesional de SNARIV para continuar con el proceso.</p>
+      <div class="info-nota">⚠️ Recomendación importante: el usuario debe conservar durante todo el proceso su usuario, contraseña, correo electrónico registrado y los soportes y documentos generados durante el trámite. Esta información será necesaria para consultar el estado y realizar seguimiento a la definición de su situación militar.</div>
+    `
+  },
+  indigenas: {
+    etiqueta: 'Programa',
+    titulo: 'Comunidades Indígenas',
+    html: `
+      <p><strong>Requisitos para la expedición de la Libreta Militar</strong></p>
+      <p>Las personas pertenecientes a población indígena que requieran realizar el trámite para la libreta militar deberán cumplir con los siguientes requisitos:</p>
+      <ul>
+        <li>Estar registrado en la plataforma oficial de incorporación y definición de la situación militar: <a href="https://www.incorporacion.libretamilitar.mil.co" target="_blank" rel="noopener">www.incorporacion.libretamilitar.mil.co</a></li>
+        <li>Cédula de ciudadanía del solicitante: fotocopia ampliada al 150 %.</li>
+        <li>Cédulas de ciudadanía de los padres: fotocopias ampliadas al 150 %.</li>
+        <li>Registro civil de nacimiento: original o copia autenticada por la Registraduría Nacional del Estado Civil o por una notaría.</li>
+        <li>Acta de grado o diploma de bachiller, si aplica.</li>
+        <li>Certificado del Ministerio del Interior que acredite la pertenencia a una comunidad o población indígena.</li>
+        <li>Certificado del Cabildo Indígena correspondiente.</li>
+        <li>Carpeta de cuatro (4) aletas, color blanco, para la documentación.</li>
+      </ul>
+      <p><strong>Requisitos para ser beneficiario del Programa de Adulto Mayor</strong></p>
+      <p>Para acceder al beneficio dirigido a la población indígena adulta mayor, se deben cumplir los siguientes requisitos:</p>
+      <ul>
+        <li>Contar con certificado del Ministerio del Interior que acredite la pertenencia a población indígena.</li>
+        <li>Tener 54 años o más, en el caso de las mujeres.</li>
+        <li>Tener 59 años o más, en el caso de los hombres.</li>
+        <li>Presentar fotocopia de la cédula de ciudadanía ampliada al 150 %.</li>
+      </ul>
+    `
+  },
+  renta_ciudadana: {
+    etiqueta: 'Programa',
+    titulo: 'Renta Ciudadana',
+    html: `
+      <p><strong>Requisitos para el programa Renta Ciudadana</strong></p>
+      <p>Para ser beneficiario del programa, el solicitante debe cumplir con los siguientes requisitos:</p>
+      <ul>
+        <li>Ser madre o padre soltero o soltera, con hijos menores de 6 años a cargo.</li>
+        <li>Estar clasificado en el grupo A del Sisbén o del RUI.</li>
+        <li>No pertenecer a un grupo familiar conformado por madre y padre (hogar biparental).</li>
+        <li>Una vez cumplidos los requisitos anteriores, el hogar queda a la espera de que el Gobierno Nacional lo priorice dentro del programa, según la disponibilidad de cupos.</li>
+      </ul>
+      <p>Para mayor información, acérquese a la Oficina de Programas y Proyectos Sociales del municipio.</p>
+    `
+  },
+  renta_joven: {
+    etiqueta: 'Programa',
+    titulo: 'Renta Joven',
+    html: `
+      <div class="info-nota">📢 Información importante</div>
+      <p>Para ser potencial beneficiario del programa Renta Joven, es necesario cumplir con los requisitos establecidos por el programa, entre ellos, encontrarse matriculado y estudiando en una institución de educación superior pública y realizar el proceso de inscripción cuando se encuentre habilitado.</p>
+      <p>Una vez realizada la inscripción, se debe esperar el proceso de validación y selección de potenciales beneficiarios por parte de Prosperidad Social.</p>
+      <div class="info-nota">📌 Actualmente, las inscripciones al programa Renta Joven se encuentran suspendidas y no hay convocatoria abierta. Por lo tanto, en este momento no se están realizando nuevas inscripciones.</div>
+      <p>Se recomienda estar atento únicamente a los canales oficiales de Prosperidad Social para conocer oportunamente cualquier anuncio relacionado con la apertura de nuevas inscripciones.</p>
+      <p><strong>¡Mantente informado y evita compartir o diligenciar información personal en enlaces no oficiales!</strong></p>
+    `
+  },
+  iva: {
+    etiqueta: 'Programa',
+    titulo: 'Devolución del IVA',
+    html: `
+      <p>Para ser potencial beneficiario del programa Devolución del IVA, el hogar debe encontrarse clasificado en los grupos de mayor vulnerabilidad establecidos por el Gobierno Nacional, de acuerdo con la información registrada en el Sisbén IV.</p>
+      <p>La clasificación en el grupo A del Sisbén es uno de los criterios de focalización utilizados para identificar hogares que pueden ser priorizados. Sin embargo, estar en el grupo A no garantiza automáticamente la asignación del beneficio, ya que la selección y priorización de los hogares corresponde al Gobierno Nacional, de acuerdo con los criterios establecidos para el programa.</p>
+      <div class="info-nota">📌 Importante: no es necesario pagar a terceros ni realizar trámites por fuera de los canales oficiales para ser seleccionado como beneficiario.</div>
+      <p>Se recomienda mantener actualizada la información del Sisbén y estar atento a los canales oficiales de Prosperidad Social para consultar si el hogar fue priorizado como beneficiario.</p>
+    `
+  },
+  pqr: {
+    etiqueta: 'PQR',
+    titulo: 'Peticiones, Quejas, Reclamos, Sugerencias y Denuncias',
+    html: `
+      <p>A través del sistema de PQR puedes presentar de manera formal cualquier petición, queja, reclamo, sugerencia o solicitud de información relacionada con los servicios, programas o atención de la entidad.</p>
+      <p>El ciudadano podrá radicar su solicitud de manera fácil y segura, realizar el seguimiento correspondiente y recibir respuesta dentro de los términos establecidos por la normativa vigente.</p>
+      <div class="info-nota">📌 Recuerda: al momento de realizar la radicación, proporciona información clara y completa sobre tu solicitud para facilitar su atención y respuesta.</div>
+    `
+  }
+};
+
+let infoProgramaAbierto = false;
+
+function abrirInfoPrograma(clave){
+  const info = PROGRAMAS_INFO[clave];
+  if(!info) return;
+  document.getElementById('info-box-etiqueta').textContent = info.etiqueta;
+  document.getElementById('info-box-titulo').textContent = info.titulo;
+  document.getElementById('info-box-cuerpo').innerHTML = info.html;
+  document.getElementById('info-box-cuerpo').scrollTop = 0;
+  document.getElementById('info-overlay').classList.add('open');
+  infoProgramaAbierto = true;
+}
+
+function cerrarInfoPrograma(){
+  document.getElementById('info-overlay').classList.remove('open');
+  infoProgramaAbierto = false;
+}
+
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape' && infoProgramaAbierto) cerrarInfoPrograma();
+});
+
 function urlVideoEmbed(url){
   if(!url) return null;
   const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{6,})/);
@@ -860,7 +1100,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-07-28';
+const APP_VERSION = '2026-10-08-1';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
