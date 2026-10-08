@@ -386,8 +386,8 @@
 
 <div class="modal-overlay" id="modal-actividades-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-actividades-title">
   <div class="modal-card">
-    <h2 id="modal-actividades-title">Registrar actividad administrativa</h2>
-    <p class="modal-sub">Actas, oficios, foliación, resoluciones, decretos, comités, reuniones, visitas... todo lo que no pasa por el chatbot, para medir la carga real de trabajo.</p>
+    <h2 id="modal-actividades-title">Iniciar actividad administrativa</h2>
+    <p class="modal-sub">Actas, oficios, foliación, resoluciones, decretos, comités, reuniones, visitas... todo lo que no pasa por el chatbot, para medir la carga real de trabajo. Se registra la hora de inicio; cuando termines, le das "Terminar" en la lista de abajo y los minutos se calculan solos.</p>
 
     <div class="field">
       <label for="act-tipo">Tipo de actividad</label>
@@ -413,21 +413,12 @@
         <input type="number" id="act-cantidad" min="1" value="1">
       </div>
       <div class="field">
-        <label for="act-minutos">Minutos dedicados (opcional)</label>
-        <input type="number" id="act-minutos" min="1" placeholder="Ej: 30">
+        <label for="act-fecha">Fecha</label>
+        <input type="date" id="act-fecha">
       </div>
     </div>
-    <div class="field">
-      <label for="act-fecha">Fecha</label>
-      <input type="date" id="act-fecha">
-    </div>
-    <div class="field">
-      <label for="act-archivo">Adjuntar el documento (opcional)</label>
-      <input type="file" id="act-archivo" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
-      <p style="font-size:11.5px;color:var(--ink-soft);margin:4px 0 0;">Así tu coordinador(a) encuentra el acta, oficio o documento ya terminado, sin tener que pedírtelo. Máx. 10&nbsp;MB.</p>
-    </div>
     <div class="modal-actions" style="justify-content:flex-start;">
-      <button class="btn-save" id="btn-actividades-agregar">Guardar</button>
+      <button class="btn-save" id="btn-actividades-agregar">Iniciar actividad</button>
     </div>
     <div class="modal-msg" id="act-msg" role="status" aria-live="polite"></div>
 
@@ -1565,15 +1556,16 @@ function cerrarModalDocumentos(){
   document.getElementById('modal-documentos-overlay').classList.remove('open');
 }
 
+let actividadesCache = [];
+let actividadTerminandoId = null;
+
 async function abrirModalActividades(){
   document.getElementById('act-tipo').value = 'Acta de reunión';
   document.getElementById('act-descripcion').value = '';
   document.getElementById('act-cantidad').value = '1';
-  document.getElementById('act-minutos').value = '';
   document.getElementById('act-fecha').value = new Date().toISOString().slice(0,10);
   document.getElementById('act-msg').textContent = '';
-  const archivoInput = document.getElementById('act-archivo');
-  if(archivoInput) archivoInput.value = '';
+  actividadTerminandoId = null;
   await cargarActividades();
   document.getElementById('modal-actividades-overlay').classList.add('open');
 }
@@ -1583,40 +1575,105 @@ function cerrarModalActividades(){
 }
 
 async function cargarActividades(){
-  const wrap = document.getElementById('actividades-lista');
   const { data, error } = await sb.from('actividades_administrativas')
     .select('*')
     .eq('funcionario_id', perfil.id)
     .order('fecha', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(15);
-  if(error){ wrap.innerHTML = '<div class="empty-state">No se pudo cargar la lista.</div>'; return; }
+  if(error){
+    actividadesCache = [];
+    document.getElementById('actividades-lista').innerHTML = '<div class="empty-state">No se pudo cargar la lista.</div>';
+    return;
+  }
+  actividadesCache = data || [];
+  renderActividadesLista();
+}
+
+function renderActividadesLista(){
+  const wrap = document.getElementById('actividades-lista');
+  const data = actividadesCache;
   if(!data || data.length === 0){ wrap.innerHTML = '<div class="empty-state">Todavía no has registrado actividades.</div>'; return; }
-  wrap.innerHTML = data.map(a => `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;">
-      <div>
-        <div style="font-weight:600;font-size:13px;">${escapeHtml(a.tipo)}${a.cantidad > 1 ? ' (x' + a.cantidad + ')' : ''}</div>
-        <div style="font-size:12px;color:var(--ink-soft);">${escapeHtml(a.fecha)}${a.tiempo_minutos ? ' · ' + a.tiempo_minutos + ' min' : ''}${a.descripcion ? ' · ' + escapeHtml(a.descripcion) : ''}</div>
-        ${a.archivo_url ? `<div style="font-size:12px;margin-top:3px;"><a href="${a.archivo_url}" target="_blank" rel="noopener">📎 ${escapeHtml(a.archivo_nombre || 'Documento')}</a></div>` : ''}
+  wrap.innerHTML = data.map(a => {
+    const enCurso = a.estado === 'en_curso';
+    const abierto = actividadTerminandoId === a.id;
+    const horaInicio = a.created_at ? new Date(a.created_at).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}) : '';
+    return `
+    <div style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div>
+          <div style="font-weight:600;font-size:13px;">${escapeHtml(a.tipo)}${a.cantidad > 1 ? ' (x' + a.cantidad + ')' : ''} ${enCurso ? '<span class="tag tag-en_curso">En curso</span>' : ''}</div>
+          <div style="font-size:12px;color:var(--ink-soft);">${escapeHtml(a.fecha)}${enCurso ? ' · iniciada ' + horaInicio : (a.tiempo_minutos ? ' · ' + a.tiempo_minutos + ' min' : '')}${a.descripcion ? ' · ' + escapeHtml(a.descripcion) : ''}</div>
+          ${a.archivo_url ? `<div style="font-size:12px;margin-top:3px;"><a href="${a.archivo_url}" target="_blank" rel="noopener">📎 ${escapeHtml(a.archivo_nombre || 'Documento')}</a></div>` : ''}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          ${enCurso ? `<button class="btn-small" onclick="toggleTerminarActividad('${a.id}')">${abierto ? 'Cancelar' : 'Terminar'}</button>` : ''}
+          <button class="btn-small" style="background:var(--red-700);color:#fff;" onclick="eliminarActividad('${a.id}')">Eliminar</button>
+        </div>
       </div>
-      <button class="btn-small" style="background:var(--red-700);color:#fff;" onclick="eliminarActividad('${a.id}')">Eliminar</button>
-    </div>
-  `).join('');
+      ${abierto ? `
+        <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);">
+          <label style="font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;" for="term-descripcion-${a.id}">Descripción (opcional)</label>
+          <input type="text" id="term-descripcion-${a.id}" value="${escapeHtml(a.descripcion || '')}" style="width:100%;margin-bottom:8px;">
+          <label style="font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;" for="term-archivo-${a.id}">Adjuntar el documento (opcional)</label>
+          <input type="file" id="term-archivo-${a.id}" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="margin-bottom:8px;">
+          <div>
+            <button class="btn-save" id="term-btn-${a.id}" onclick="terminarActividad('${a.id}')">Guardar y terminar</button>
+            <span id="term-msg-${a.id}" style="font-size:12px;margin-left:8px;"></span>
+          </div>
+        </div>
+      ` : ''}
+    </div>`;
+  }).join('');
+}
+
+function toggleTerminarActividad(id){
+  actividadTerminandoId = actividadTerminandoId === id ? null : id;
+  renderActividadesLista();
 }
 
 async function agregarActividad(){
   const tipo = document.getElementById('act-tipo').value;
   const descripcion = document.getElementById('act-descripcion').value.trim();
   const cantidad = parseInt(document.getElementById('act-cantidad').value, 10) || 1;
-  const minutosVal = document.getElementById('act-minutos').value;
-  const tiempo_minutos = minutosVal ? parseInt(minutosVal, 10) : null;
   const fecha = document.getElementById('act-fecha').value;
-  const archivoInput = document.getElementById('act-archivo');
-  const archivo = archivoInput && archivoInput.files[0] ? archivoInput.files[0] : null;
   const msg = document.getElementById('act-msg');
+  const btn = document.getElementById('btn-actividades-agregar');
   if(!fecha){ msg.textContent = 'Elige una fecha.'; return; }
   if(cantidad < 1){ msg.textContent = 'La cantidad debe ser al menos 1.'; return; }
-  let archivo_url = null, archivo_nombre = null;
+
+  btn.disabled = true; btn.textContent = 'Iniciando...';
+  msg.textContent = '';
+  const { error } = await sb.from('actividades_administrativas').insert({
+    funcionario_id: perfil.id,
+    tipo,
+    descripcion: descripcion || null,
+    cantidad,
+    tiempo_minutos: null,
+    fecha,
+    estado: 'en_curso',
+  });
+  btn.disabled = false; btn.textContent = 'Iniciar actividad';
+  if(error){ msg.textContent = 'Error al iniciar: ' + error.message; return; }
+  msg.textContent = 'Actividad iniciada ✓';
+  document.getElementById('act-descripcion').value = '';
+  document.getElementById('act-cantidad').value = '1';
+  await cargarActividades();
+}
+
+async function terminarActividad(id){
+  const a = actividadesCache.find(x => x.id === id);
+  if(!a) return;
+  const archivoInput = document.getElementById('term-archivo-' + id);
+  const descInput = document.getElementById('term-descripcion-' + id);
+  const msg = document.getElementById('term-msg-' + id);
+  const btn = document.getElementById('term-btn-' + id);
+  const archivo = archivoInput && archivoInput.files[0] ? archivoInput.files[0] : null;
+
+  btn.disabled = true; btn.textContent = 'Terminando...';
+  msg.textContent = '';
+
+  let archivo_url = a.archivo_url || null, archivo_nombre = a.archivo_nombre || null;
   if(archivo){
     msg.textContent = 'Subiendo documento…';
     try{
@@ -1624,29 +1681,30 @@ async function agregarActividad(){
       archivo_url = subido.url;
       archivo_nombre = subido.nombre;
     }catch(e){
-      if(e.message === 'TAMANO'){ msg.textContent = 'El documento supera 10 MB.'; return; }
-      if(e.message === 'TIPO'){ msg.textContent = 'Tipo de archivo no permitido.'; return; }
-      msg.textContent = 'No se pudo subir el documento. Intenta de nuevo.';
+      btn.disabled = false; btn.textContent = 'Guardar y terminar';
+      if(e.message === 'TAMANO') msg.textContent = 'El documento supera 10 MB.';
+      else if(e.message === 'TIPO') msg.textContent = 'Tipo de archivo no permitido.';
+      else msg.textContent = 'No se pudo subir el documento. Intenta de nuevo.';
       return;
     }
   }
-  msg.textContent = 'Guardando…';
-  const { error } = await sb.from('actividades_administrativas').insert({
-    funcionario_id: perfil.id,
-    tipo,
-    descripcion: descripcion || null,
-    cantidad,
+
+  const ahora = new Date();
+  const inicio = a.created_at ? new Date(a.created_at) : null;
+  const tiempo_minutos = inicio ? Math.max(1, Math.round((ahora - inicio) / 60000)) : null;
+  const descripcionFinal = (descInput ? descInput.value.trim() : '') || a.descripcion || null;
+
+  const { error } = await sb.from('actividades_administrativas').update({
+    estado: 'finalizada',
+    finalizado_en: ahora.toISOString(),
     tiempo_minutos,
-    fecha,
     archivo_url,
     archivo_nombre,
-  });
-  if(error){ msg.textContent = 'Error al guardar: ' + error.message; return; }
-  msg.textContent = 'Actividad guardada ✓';
-  document.getElementById('act-descripcion').value = '';
-  document.getElementById('act-cantidad').value = '1';
-  document.getElementById('act-minutos').value = '';
-  if(archivoInput) archivoInput.value = '';
+    descripcion: descripcionFinal,
+  }).eq('id', id);
+  btn.disabled = false; btn.textContent = 'Guardar y terminar';
+  if(error){ msg.textContent = 'Error al guardar.'; return; }
+  actividadTerminandoId = null;
   await cargarActividades();
 }
 
@@ -1799,6 +1857,7 @@ async function exportarExcel(){
       'Tipo': a.tipo || '',
       'Descripción': a.descripcion || '',
       'Cantidad': a.cantidad ?? '',
+      'Estado': a.estado === 'en_curso' ? 'En curso' : 'Finalizada',
       'Minutos dedicados': a.tiempo_minutos ?? '',
     }));
     XLSX.utils.book_append_sheet(wb, hojaDeTabla(actRows), 'Actividades');
