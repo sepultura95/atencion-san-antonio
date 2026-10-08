@@ -212,6 +212,8 @@
   }
   .modal-card .field textarea{min-height:70px;resize:vertical;}
   .modal-row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .modal-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  @media (max-width:480px){.modal-row3{grid-template-columns:1fr;}}
   .check-group{display:flex;flex-wrap:wrap;gap:8px;}
   .check-chip{
     border:1px solid var(--line);background:var(--paper);color:var(--ink-soft);
@@ -506,10 +508,14 @@
       <label for="pf-nombre">Nombre completo</label>
       <input type="text" id="pf-nombre">
     </div>
-    <div class="modal-row2">
+    <div class="modal-row3">
       <div class="field">
         <label for="pf-documento">Documento de identidad</label>
         <input type="text" id="pf-documento" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label for="pf-edad">Edad</label>
+        <input type="number" id="pf-edad" min="0" max="120" step="1" inputmode="numeric">
       </div>
       <div class="field">
         <label for="pf-contacto">Teléfono o correo (opcional)</label>
@@ -641,7 +647,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-08-2';
+const APP_VERSION = '2026-10-08-3';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -906,6 +912,7 @@ function renderDetail(){
     <h2>${escapeHtml(s.nombre || 'Sin nombre')} <span class="tag tag-${s.estado}">${labelEstado(s.estado)}</span>${s.prioritaria?' <span class="tag tag-prioritaria">Prioritaria</span>':''}${s._turno ? ` <span class="tag tag-canal">Turno ${s._turno} de ${s._totalEnEspera}</span>` : ''}</h2>
     <div class="grid-info">
       <div><span>Documento</span>${escapeHtml(s.documento || '—')}</div>
+      <div><span>Edad</span>${s.edad != null ? s.edad + ' años' : '—'}</div>
       <div><span>Contacto</span>${escapeHtml(s.contacto || '—')}</div>
       <div><span>Programa</span>${escapeHtml(s.programa || '—')}</div>
       <div><span>Tipo de trámite</span>${escapeHtml(s.tipo || '—')}</div>
@@ -1770,6 +1777,7 @@ async function exportarExcel(){
         'Prioritaria': s.prioritaria ? 'Sí' : 'No',
         'Nombre ciudadano': s.nombre || '',
         'Documento': s.documento || '',
+        'Edad': s.edad ?? '',
         'Contacto': s.contacto || '',
         'Caracterización': Array.isArray(s.caracterizacion) ? s.caracterizacion.join(', ') : '',
         'Atendido por': s.atendido_por || '',
@@ -2026,6 +2034,7 @@ function abrirModalPresencial(){
 
   document.getElementById('pf-nombre').value = '';
   document.getElementById('pf-documento').value = '';
+  document.getElementById('pf-edad').value = '';
   document.getElementById('pf-contacto').value = '';
   document.getElementById('pf-tipo').value = 'Trámite';
   document.getElementById('pf-descripcion').value = '';
@@ -2050,6 +2059,8 @@ function cerrarModalPresencial(){
 async function guardarPresencial(){
   const nombre = document.getElementById('pf-nombre').value.trim();
   const documento = document.getElementById('pf-documento').value.trim().replace(/\D/g,'');
+  const edadVal = document.getElementById('pf-edad').value;
+  const edad = edadVal === '' ? null : parseInt(edadVal, 10);
   const contacto = document.getElementById('pf-contacto').value.trim();
   const programa = document.getElementById('pf-programa').value;
   const tipo = document.getElementById('pf-tipo').value;
@@ -2064,6 +2075,11 @@ async function guardarPresencial(){
     msg.style.color = 'var(--red-700)';
     return;
   }
+  if(edad !== null && (isNaN(edad) || edad < 0 || edad > 120)){
+    msg.textContent = 'La edad debe ser un número entre 0 y 120, o déjala en blanco.';
+    msg.style.color = 'var(--red-700)';
+    return;
+  }
 
   btn.disabled = true; btn.textContent = 'Guardando...';
   const id = crypto.randomUUID();
@@ -2072,6 +2088,7 @@ async function guardarPresencial(){
     id,
     nombre,
     documento,
+    edad,
     contacto: contacto || null,
     programa,
     tipo,

@@ -1305,7 +1305,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-08-2';
+const APP_VERSION = '2026-10-08-3';
 let avisoVersionMostrado = false;
 
 /* ============================================================
@@ -1375,6 +1375,7 @@ async function createSolicitud(data){
     id,
     nombre: data.nombre,
     documento: data.documento,
+    edad: data.edad ?? null,
     contacto: data.contacto,
     programa: data.oficina,
     tipo: data.tipo,
@@ -1909,6 +1910,12 @@ function goRadicarContacto(){
   showTextInput('Teléfono o correo');
 }
 
+function goRadicarEdad(){
+  chatState = 'RADICAR_EDAD';
+  addMsg('¿Cuántos años tienes? Esta información nos ayuda a caracterizar a la población atendida.', 'bot');
+  showTextInput('Edad');
+}
+
 const CARACTERIZACION_OPCIONES = ['Víctima del conflicto','Discapacidad','LGBTI','Desmovilizado','Indígena','Otro'];
 
 function goRadicarCaracterizacion(){
@@ -1982,7 +1989,7 @@ function goRadicarAdjunto(){
 function goConfirmar(){
   chatState = 'CONFIRMAR';
   hideTextInput();
-  let resumen = `Voy a radicar lo siguiente:\n\nPrograma: ${draft.oficina}\nTipo: ${draft.tipo}\nNombre: ${draft.nombre}\nDocumento: ${draft.documento}\nContacto: ${draft.contacto}\nDescripción: ${draft.descripcion}`;
+  let resumen = `Voy a radicar lo siguiente:\n\nPrograma: ${draft.oficina}\nTipo: ${draft.tipo}\nNombre: ${draft.nombre}\nDocumento: ${draft.documento}\nEdad: ${draft.edad}\nContacto: ${draft.contacto}\nDescripción: ${draft.descripcion}`;
   if(draft.caracterizacion && draft.caracterizacion.length) resumen += `\nCaracterización: ${draft.caracterizacion.join(', ')}`;
   if(draft.archivo) resumen += `\nAdjunto: ${draft.archivo.nombre}`;
   resumen += `\n\n¿Confirmas?`;
@@ -1997,6 +2004,7 @@ async function enviarSolicitud(){
     id: draft.id,
     nombre: draft.nombre,
     documento: draft.documento,
+    edad: draft.edad,
     contacto: draft.contacto,
     oficina: draft.oficina,
     tipo: draft.tipo,
@@ -2097,7 +2105,17 @@ function handleTextStep(val){
     draft.documento = soloDigitos;
     return goRadicarContacto();
   }
-  if(chatState==='RADICAR_CONTACTO'){ draft.contacto = val; return goRadicarCaracterizacion(); }
+  if(chatState==='RADICAR_CONTACTO'){ draft.contacto = val; return goRadicarEdad(); }
+  if(chatState==='RADICAR_EDAD'){
+    const edadNum = parseInt(val.replace(/\D/g,''), 10);
+    if(isNaN(edadNum) || edadNum < 0 || edadNum > 120){
+      addMsg('Escribe tu edad en números, por ejemplo 34.', 'bot');
+      showTextInput('Edad');
+      return;
+    }
+    draft.edad = edadNum;
+    return goRadicarCaracterizacion();
+  }
   if(chatState==='RADICAR_CARACTERIZACION_OTRO'){
     draft.caracterizacion.push('Otro: ' + val);
     chatState = 'RADICAR_CARACTERIZACION';
