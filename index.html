@@ -674,7 +674,7 @@
         </div>
         <div class="info-box-body" id="info-box-cuerpo"></div>
         <div class="info-box-foot">
-          <button class="btn btn-primary" onclick="cerrarInfoPrograma(); openChat(); botStart('RADICAR')">Radicar una solicitud</button>
+          <button class="btn btn-primary" onclick="radicarDesdeInfoPrograma()">Radicar una solicitud</button>
           <button class="btn btn-ghost" id="btn-escuchar-info" onclick="toggleLeerInfoPrograma()">🔊 Escuchar</button>
           <button class="btn btn-ghost" onclick="cerrarInfoPrograma()">Cerrar</button>
         </div>
@@ -996,6 +996,7 @@ const PROGRAMAS_INFO = {
   adulto_mayor: {
     etiqueta: 'Programa',
     titulo: 'Adulto Mayor',
+    oficina: 'Adulto Mayor',
     html: `
       <p><strong>Requisitos para acceder al programa de atención al adulto mayor</strong></p>
       <p>Para solicitar la inscripción al programa dirigido a las personas adultas mayores, el interesado debe cumplir con los siguientes requisitos:</p>
@@ -1011,6 +1012,7 @@ const PROGRAMAS_INFO = {
   discapacidad: {
     etiqueta: 'Programa',
     titulo: 'Discapacidad',
+    oficina: 'Discapacidad',
     html: `
       <p><strong>Requisitos para solicitar la certificación de discapacidad</strong></p>
       <p>La certificación de discapacidad es un trámite dirigido a las personas que requieren la valoración correspondiente para determinar si cumplen los criterios establecidos en la normativa vigente.</p>
@@ -1031,6 +1033,7 @@ const PROGRAMAS_INFO = {
   victimas: {
     etiqueta: 'Programa',
     titulo: 'Víctimas del Conflicto',
+    oficina: 'Víctimas del Conflicto',
     html: `
       <p><strong>Trámites y servicios realizados por el Enlace de Víctimas</strong></p>
       <p>El Enlace Municipal de Víctimas brinda orientación y apoyo a la población víctima en los siguientes trámites y servicios, a través de las plataformas y canales institucionales:</p>
@@ -1069,6 +1072,7 @@ const PROGRAMAS_INFO = {
   indigenas: {
     etiqueta: 'Programa',
     titulo: 'Comunidades Indígenas',
+    oficina: 'Comunidades Indígenas',
     html: `
       <p><strong>Requisitos para la expedición de la Libreta Militar</strong></p>
       <p>Las personas pertenecientes a población indígena que requieran realizar el trámite para la libreta militar deberán cumplir con los siguientes requisitos:</p>
@@ -1095,6 +1099,7 @@ const PROGRAMAS_INFO = {
   renta_ciudadana: {
     etiqueta: 'Programa',
     titulo: 'Renta Ciudadana',
+    oficina: 'Renta Ciudadana',
     html: `
       <p><strong>Requisitos para el programa Renta Ciudadana</strong></p>
       <p>Para ser beneficiario del programa, el solicitante debe cumplir con los siguientes requisitos:</p>
@@ -1110,6 +1115,7 @@ const PROGRAMAS_INFO = {
   renta_joven: {
     etiqueta: 'Programa',
     titulo: 'Renta Joven',
+    oficina: 'Renta Joven',
     html: `
       <div class="info-nota">📢 Información importante</div>
       <p>Para ser potencial beneficiario del programa Renta Joven, es necesario cumplir con los requisitos establecidos por el programa, entre ellos, encontrarse matriculado y estudiando en una institución de educación superior pública y realizar el proceso de inscripción cuando se encuentre habilitado.</p>
@@ -1122,6 +1128,7 @@ const PROGRAMAS_INFO = {
   iva: {
     etiqueta: 'Programa',
     titulo: 'Devolución del IVA',
+    oficina: 'Devolución del IVA',
     html: `
       <p>Para ser potencial beneficiario del programa Devolución del IVA, el hogar debe encontrarse clasificado en los grupos de mayor vulnerabilidad establecidos por el Gobierno Nacional, de acuerdo con la información registrada en el Sisbén IV.</p>
       <p>La clasificación en el grupo A del Sisbén es uno de los criterios de focalización utilizados para identificar hogares que pueden ser priorizados. Sin embargo, estar en el grupo A no garantiza automáticamente la asignación del beneficio, ya que la selección y priorización de los hogares corresponde al Gobierno Nacional, de acuerdo con los criterios establecidos para el programa.</p>
@@ -1132,6 +1139,7 @@ const PROGRAMAS_INFO = {
   pqr: {
     etiqueta: 'PQR',
     titulo: 'Peticiones, Quejas, Reclamos, Sugerencias y Denuncias',
+    oficina: 'PQR',
     html: `
       <p>A través del sistema de PQR puedes presentar de manera formal cualquier petición, queja, reclamo, sugerencia o solicitud de información relacionada con los servicios, programas o atención de la entidad.</p>
       <p>El ciudadano podrá radicar su solicitud de manera fácil y segura, realizar el seguimiento correspondiente y recibir respuesta dentro de los términos establecidos por la normativa vigente.</p>
@@ -1141,10 +1149,12 @@ const PROGRAMAS_INFO = {
 };
 
 let infoProgramaAbierto = false;
+let infoProgramaActual = null;
 
 function abrirInfoPrograma(clave){
   const info = PROGRAMAS_INFO[clave];
   if(!info) return;
+  infoProgramaActual = clave;
   document.getElementById('info-box-etiqueta').textContent = info.etiqueta;
   document.getElementById('info-box-titulo').textContent = info.titulo;
   document.getElementById('info-box-cuerpo').innerHTML = info.html;
@@ -1159,6 +1169,20 @@ function cerrarInfoPrograma(){
   if(btnEscuchar) btnEscuchar.textContent = '🔊 Escuchar';
   document.getElementById('info-overlay').classList.remove('open');
   infoProgramaAbierto = false;
+}
+
+function radicarDesdeInfoPrograma(){
+  const info = infoProgramaActual ? PROGRAMAS_INFO[infoProgramaActual] : null;
+  cerrarInfoPrograma();
+  openChat();
+  if(info && info.oficina){
+    draft = {directoAFuncionario:false, id: crypto.randomUUID(), oficina: info.oficina};
+    chatState = 'RADICAR_TIPO';
+    hideTextInput();
+    addMsg(`Perfecto, vamos a radicar tu solicitud para el programa de ${info.oficina}.`, 'bot');
+    return goRadicarTipo();
+  }
+  botStart('RADICAR');
 }
 
 function toggleLeerInfoPrograma(){
@@ -1305,7 +1329,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-08-3';
+const APP_VERSION = '2026-10-08-4';
 let avisoVersionMostrado = false;
 
 /* ============================================================
