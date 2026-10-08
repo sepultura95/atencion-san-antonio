@@ -155,6 +155,7 @@
   .tag-pendiente{background:#f3e4c6;color:#8a5c13;}
   .tag-en_proceso{background:#dce8e3;color:var(--green-700);}
   .tag-resuelto{background:#dfe9dc;color:#2f6b3a;}
+  .tag-en_curso{background:#dde6f2;color:#2d4f73;}
   .tag-prioritaria{background:#f6dad3;color:var(--red-700);margin-left:5px;}
 
   .detail{padding:26px 32px;overflow-y:auto;}
@@ -279,7 +280,7 @@
       <a class="btn-ghost" id="btn-dashboard" href="dashboard.html" style="display:none;text-decoration:none;">📈 Indicadores</a>
       <button class="btn-ghost" id="btn-exportar-excel" style="display:none;">📊 Exportar a Excel</button>
       <button class="btn-ghost" id="btn-borrar-prueba" style="display:none;color:var(--red-700);border-color:var(--red-700);">🗑️ Borrar datos de prueba</button>
-      <button class="btn-presencial" id="btn-presencial" style="display:none;">➕ Atención presencial</button>
+      <button class="btn-presencial" id="btn-presencial" style="display:none;">➕ Iniciar atención presencial</button>
       <button class="btn-ghost" id="btn-logout" style="display:none;">Cerrar sesión</button>
     </div>
   </div>
@@ -502,8 +503,8 @@
 
 <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal-card">
-    <h2 id="modal-title">Registrar atención presencial</h2>
-    <p class="modal-sub">Para cuando atiendes a alguien en persona, sin pasar por el chat.</p>
+    <h2 id="modal-title">Iniciar atención presencial</h2>
+    <p class="modal-sub">Para cuando atiendes a alguien en persona, sin pasar por el chat. Se registra la hora de inicio y queda cargada en el módulo; cuando termines, entras a la solicitud y le das "Terminar atención" para que la duración se calcule sola.</p>
     <div class="field">
       <label for="pf-nombre">Nombre completo</label>
       <input type="text" id="pf-nombre">
@@ -545,27 +546,13 @@
       <input type="text" id="pf-otro-detalle" placeholder="¿Cuál?" style="display:none;margin-top:8px;">
     </div>
     <div class="field">
-      <label for="pf-descripcion">¿Qué se atendió / qué se le resolvió?</label>
-      <textarea id="pf-descripcion"></textarea>
-    </div>
-    <div class="modal-row2">
-      <div class="field">
-        <label for="pf-duracion">Duración de la atención (minutos)</label>
-        <input type="number" id="pf-duracion" min="1" step="1">
-        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;" id="pf-hora-registro"></div>
-      </div>
-      <div class="field">
-        <label for="pf-estado">Estado</label>
-        <select id="pf-estado">
-          <option value="resuelto" selected>Resuelto en el momento</option>
-          <option value="en_proceso">Queda en proceso</option>
-          <option value="pendiente">Queda pendiente</option>
-        </select>
-      </div>
+      <label for="pf-descripcion">Notas iniciales (opcional)</label>
+      <textarea id="pf-descripcion" placeholder="Lo que se atendió se describe al terminar la atención."></textarea>
+      <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;" id="pf-hora-registro"></div>
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" id="btn-presencial-cancelar">Cancelar</button>
-      <button class="btn-save" id="btn-presencial-guardar">Guardar atención</button>
+      <button class="btn-save" id="btn-presencial-guardar">Iniciar atención</button>
     </div>
     <div class="modal-msg" id="pf-msg" role="status" aria-live="polite"></div>
   </div>
@@ -647,7 +634,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-08-4';
+const APP_VERSION = '2026-10-08-5';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -813,6 +800,7 @@ function renderFilters(){
   const wrap = document.getElementById('filters');
   const opts = [
     ['todas','Todas'],
+    ['en_curso','En atención'],
     ['pendiente','Pendientes'],
     ['en_proceso','En proceso'],
     ['resuelto','Resueltas'],
@@ -899,7 +887,7 @@ function renderList(){
 }
 
 function labelEstado(e){
-  return { pendiente:'Pendiente', en_proceso:'En proceso', resuelto:'Resuelto' }[e] || e || '';
+  return { pendiente:'Pendiente', en_proceso:'En proceso', resuelto:'Resuelto', en_curso:'En atención' }[e] || e || '';
 }
 
 function renderDetail(){
@@ -907,6 +895,7 @@ function renderDetail(){
   const s = solicitudes.find(x => x.id === selectedId);
   if(!s){ wrap.innerHTML = '<div class="detail-empty">Selecciona una solicitud de la lista para ver el detalle.</div>'; return; }
   const hist = s.historial || [];
+  const esPresencialEnCurso = s.canal === 'presencial' && s.estado === 'en_curso';
   wrap.innerHTML = `
     <button class="btn-back" id="btn-back">← Volver a la lista</button>
     <h2>${escapeHtml(s.nombre || 'Sin nombre')} <span class="tag tag-${s.estado}">${labelEstado(s.estado)}</span>${s.prioritaria?' <span class="tag tag-prioritaria">Prioritaria</span>':''}${s._turno ? ` <span class="tag tag-canal">Turno ${s._turno} de ${s._totalEnEspera}</span>` : ''}</h2>
@@ -918,7 +907,9 @@ function renderDetail(){
       <div><span>Tipo de trámite</span>${escapeHtml(s.tipo || '—')}</div>
       <div><span>Canal</span>${s.canal === 'presencial' ? 'Atención presencial' : 'Chatbot'}</div>
       <div><span>Atendido por</span>${escapeHtml(s.atendido_por || '—')}</div>
-      ${s.canal === 'presencial' && s.duracion_minutos ? `<div><span>Duración</span>${s.duracion_minutos} min</div>` : ''}
+      ${s.canal === 'presencial' && s.created_at ? `<div><span>Hora de inicio</span>${new Date(s.created_at).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'})}</div>` : ''}
+      ${s.canal === 'presencial' && s.finalizado_en ? `<div><span>Hora de fin</span>${new Date(s.finalizado_en).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'})}</div>` : ''}
+      ${s.canal === 'presencial' && s.duracion_minutos != null ? `<div><span>Duración</span>${s.duracion_minutos} min</div>` : ''}
     </div>
     ${Array.isArray(s.caracterizacion) && s.caracterizacion.length ? `<div style="margin:-10px 0 18px;">${s.caracterizacion.map(c => `<span class="tag tag-caract">${escapeHtml(c)}</span>`).join(' ')}</div>` : ''}
     <div class="thread" id="thread">
@@ -929,8 +920,9 @@ function renderDetail(){
       </div>`).join('') || '<div class="msg">Sin mensajes.</div>'}
     </div>
     <div class="reply-box">
-      <label for="reply-text" class="sr-only">Respuesta para el ciudadano</label>
-      <textarea id="reply-text" placeholder="Escribe la respuesta para el ciudadano..."></textarea>
+      ${esPresencialEnCurso ? `<div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;">⏱️ Atención en curso desde las ${s.created_at ? new Date(s.created_at).toLocaleTimeString('es-CO',{timeStyle:'short'}) : '—'}. Al terminar, se registra la hora de fin y la duración se calcula sola.</div>` : ''}
+      <label for="reply-text" class="sr-only">${esPresencialEnCurso ? '¿Qué se atendió / qué se le resolvió?' : 'Respuesta para el ciudadano'}</label>
+      <textarea id="reply-text" placeholder="${esPresencialEnCurso ? '¿Qué se atendió / qué se le resolvió?' : 'Escribe la respuesta para el ciudadano...'}"></textarea>
       <div class="attach-row">
         <label for="reply-file">📎 Adjuntar archivo (PDF, Word, Excel o imagen, máx. 5 MB):</label>
         <input type="file" id="reply-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
@@ -940,9 +932,9 @@ function renderDetail(){
         <select id="estado-select">
           <option value="pendiente"${s.estado==='pendiente'?' selected':''}>Pendiente</option>
           <option value="en_proceso"${s.estado==='en_proceso'?' selected':''}>En proceso</option>
-          <option value="resuelto"${s.estado==='resuelto'?' selected':''}>Resuelto</option>
+          <option value="resuelto"${s.estado==='resuelto'||esPresencialEnCurso?' selected':''}>Resuelto</option>
         </select>
-        <button class="btn-save" id="btn-save">Guardar</button>
+        <button class="btn-save" id="btn-save">${esPresencialEnCurso ? 'Terminar atención' : 'Guardar'}</button>
         <span class="save-msg" id="save-msg" role="status" aria-live="polite"></span>
       </div>
     </div>
@@ -992,20 +984,22 @@ async function subirDocumentoActividad(file, funcionarioId){
 }
 
 async function guardarRespuesta(s){
-  const texto = document.getElementById('reply-text').value.trim();
+  const esPresencialEnCurso = s.canal === 'presencial' && s.estado === 'en_curso';
+  const textoOriginal = document.getElementById('reply-text').value.trim();
   const nuevoEstado = document.getElementById('estado-select').value;
   const fileInput = document.getElementById('reply-file');
   const file = fileInput.files[0];
   const saveMsg = document.getElementById('save-msg');
   const btn = document.getElementById('btn-save');
+  const btnTextoNormal = esPresencialEnCurso ? 'Terminar atención' : 'Guardar';
 
-  if(!texto && !file){
-    saveMsg.textContent = 'Escribe una respuesta o adjunta un documento.';
+  if(!textoOriginal && !file){
+    saveMsg.textContent = esPresencialEnCurso ? 'Describe qué se atendió o adjunta un documento.' : 'Escribe una respuesta o adjunta un documento.';
     saveMsg.style.color = 'var(--red-700)';
     return;
   }
 
-  btn.disabled = true; btn.textContent = 'Guardando...';
+  btn.disabled = true; btn.textContent = esPresencialEnCurso ? 'Terminando...' : 'Guardando...';
   saveMsg.textContent = '';
 
   let archivo = null;
@@ -1014,7 +1008,7 @@ async function guardarRespuesta(s){
       saveMsg.textContent = 'Subiendo documento…';
       archivo = await subirPdfFuncionario(file, s.id);
     }catch(e){
-      btn.disabled = false; btn.textContent = 'Guardar';
+      btn.disabled = false; btn.textContent = btnTextoNormal;
       let msg = 'No se pudo subir el documento.';
       if(e.message === 'TIPO') msg = 'Solo se admiten archivos PDF, Word, Excel o imágenes (jpg, png).';
       if(e.message === 'TAMANO') msg = 'El archivo supera 5 MB.';
@@ -1024,24 +1018,34 @@ async function guardarRespuesta(s){
     }
   }
 
+  const texto = esPresencialEnCurso && !textoOriginal ? 'Atención finalizada.' : textoOriginal;
   const hist = Array.isArray(s.historial) ? [...s.historial] : [];
   const entrada = { de:'funcionario', texto, ts: new Date().toISOString(), por: perfil.nombre || '' };
   if(archivo) entrada.archivo = archivo;
   if(texto || archivo) hist.push(entrada);
 
-  const { error } = await sb.from('solicitudes').update({
+  const payload = {
     estado: nuevoEstado,
     historial: hist,
     atendido_por: perfil.nombre || s.atendido_por || null
-  }).eq('id', s.id);
-  btn.disabled = false; btn.textContent = 'Guardar';
+  };
+  if(esPresencialEnCurso){
+    const ahora = new Date();
+    const inicio = s.created_at ? new Date(s.created_at) : null;
+    payload.finalizado_en = ahora.toISOString();
+    payload.duracion_minutos = inicio ? Math.max(1, Math.round((ahora - inicio) / 60000)) : null;
+    if(!textoOriginal) payload.descripcion = texto;
+  }
+
+  const { error } = await sb.from('solicitudes').update(payload).eq('id', s.id);
+  btn.disabled = false; btn.textContent = btnTextoNormal;
   if(error){
     console.error(error);
     saveMsg.textContent = 'Error al guardar.';
     saveMsg.style.color = 'var(--red-700)';
     return;
   }
-  saveMsg.textContent = 'Guardado ✓';
+  saveMsg.textContent = esPresencialEnCurso ? 'Atención terminada ✓' : 'Guardado ✓';
   saveMsg.style.color = 'var(--green-700)';
   document.getElementById('reply-text').value = '';
   fileInput.value = '';
@@ -2038,13 +2042,11 @@ function abrirModalPresencial(){
   document.getElementById('pf-contacto').value = '';
   document.getElementById('pf-tipo').value = 'Trámite';
   document.getElementById('pf-descripcion').value = '';
-  document.getElementById('pf-duracion').value = '';
-  document.getElementById('pf-estado').value = 'resuelto';
   document.getElementById('pf-msg').textContent = '';
   document.getElementById('pf-otro-detalle').style.display = 'none';
   document.getElementById('pf-otro-detalle').value = '';
   document.getElementById('pf-hora-registro').textContent =
-    'Hora de registro: ' + new Date().toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'});
+    'Hora de inicio: ' + new Date().toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'});
   pfCaracterizacion = [];
   renderCaracterizacionCheckboxes();
 
@@ -2064,14 +2066,12 @@ async function guardarPresencial(){
   const contacto = document.getElementById('pf-contacto').value.trim();
   const programa = document.getElementById('pf-programa').value;
   const tipo = document.getElementById('pf-tipo').value;
-  const descripcion = document.getElementById('pf-descripcion').value.trim();
-  const duracion = parseInt(document.getElementById('pf-duracion').value, 10);
-  const estado = document.getElementById('pf-estado').value;
+  const notas = document.getElementById('pf-descripcion').value.trim();
   const msg = document.getElementById('pf-msg');
   const btn = document.getElementById('btn-presencial-guardar');
 
-  if(!nombre || !documento || !descripcion){
-    msg.textContent = 'Completa al menos nombre, documento y qué se atendió.';
+  if(!nombre || !documento){
+    msg.textContent = 'Completa al menos nombre y documento.';
     msg.style.color = 'var(--red-700)';
     return;
   }
@@ -2081,7 +2081,7 @@ async function guardarPresencial(){
     return;
   }
 
-  btn.disabled = true; btn.textContent = 'Guardando...';
+  btn.disabled = true; btn.textContent = 'Iniciando...';
   const id = crypto.randomUUID();
   const ahora = new Date().toISOString();
   const { error } = await sb.from('solicitudes').insert({
@@ -2092,20 +2092,20 @@ async function guardarPresencial(){
     contacto: contacto || null,
     programa,
     tipo,
-    descripcion,
+    descripcion: notas || null,
     prioritaria: false,
-    estado,
+    estado: 'en_curso',
     canal: 'presencial',
     atendido_por: perfil.nombre || '',
-    duracion_minutos: isNaN(duracion) ? null : duracion,
+    duracion_minutos: null,
     caracterizacion: pfCaracterizacion.length ? pfCaracterizacion : null,
-    historial: [{ de:'funcionario', texto: descripcion, ts: ahora, por: perfil.nombre || '' }]
+    historial: notas ? [{ de:'funcionario', texto: notas, ts: ahora, por: perfil.nombre || '' }] : []
   });
-  btn.disabled = false; btn.textContent = 'Guardar atención';
+  btn.disabled = false; btn.textContent = 'Iniciar atención';
 
   if(error){
     console.error(error);
-    msg.textContent = 'No se pudo guardar. Intenta de nuevo.';
+    msg.textContent = 'No se pudo iniciar. Intenta de nuevo.';
     msg.style.color = 'var(--red-700)';
     return;
   }
