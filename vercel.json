@@ -1,18 +1,12 @@
 {
-  "rewrites": [
-    {
-      "source": "/",
-      "has": [
-        { "type": "host", "value": "panel.alcaldiasanantonio.com.co" }
-      ],
-      "destination": "/panel.html"
-    },
+  "redirects": [
     {
       "source": "/:path*",
       "has": [
         { "type": "host", "value": "panel.alcaldiasanantonio.com.co" }
       ],
-      "destination": "/panel.html"
+      "destination": "https://alcaldiasanantonio.com.co/panel.html",
+      "permanent": false
     }
   ]
 }
