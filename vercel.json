@@ -1,6 +1,13 @@
 {
   "rewrites": [
     {
+      "source": "/",
+      "has": [
+        { "type": "host", "value": "panel.alcaldiasanantonio.com.co" }
+      ],
+      "destination": "/panel.html"
+    },
+    {
       "source": "/:path*",
       "has": [
         { "type": "host", "value": "panel.alcaldiasanantonio.com.co" }
