@@ -621,7 +621,16 @@
 <script>
 const SUPABASE_URL = 'https://yjkibftpjvhedbmscbwo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_elPZQ7xh3ManlHtDWJY1DA_1TgwZvgk';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    // Guarda la sesión solo mientras el navegador esté abierto. Al cerrar
+    // el navegador (o apagar el equipo), la sesión se borra y hay que
+    // volver a iniciar sesión — importante en equipos compartidos.
+    storage: window.sessionStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+});
 
 /* ============================================================
    Apariencia del encabezado (logo y fondo), configurable aquí mismo
@@ -656,7 +665,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-17-1';
+const APP_VERSION = '2026-10-17-2';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
