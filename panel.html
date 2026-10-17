@@ -281,6 +281,7 @@
       <button class="btn-ghost" id="btn-exportar-excel" style="display:none;">📊 Exportar a Excel</button>
       <button class="btn-ghost" id="btn-borrar-prueba" style="display:none;color:var(--red-700);border-color:var(--red-700);">🗑️ Borrar datos de prueba</button>
       <button class="btn-presencial" id="btn-presencial" style="display:none;">➕ Iniciar atención presencial</button>
+      <button class="btn-ghost" id="btn-cambiar-pass" style="display:none;">🔑 Cambiar contraseña</button>
       <button class="btn-ghost" id="btn-logout" style="display:none;">Cerrar sesión</button>
     </div>
   </div>
@@ -562,7 +563,37 @@
       <input type="password" id="login-pass" autocomplete="current-password">
     </div>
     <button class="btn-primary" id="btn-login">Ingresar</button>
+    <div style="margin-top:10px;font-size:12.5px;">
+      <a href="#" id="link-olvide-pass">¿Olvidaste tu contraseña?</a>
+    </div>
     <div class="login-error" id="login-error" role="alert" aria-live="assertive"></div>
+
+    <div id="recuperar-wrap" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--line);">
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;">Escribe tu correo arriba y te enviamos un enlace para crear una contraseña nueva.</p>
+      <button class="btn-primary" id="btn-enviar-recuperacion">Enviar enlace de recuperación</button>
+      <div class="login-error" id="recuperar-msg" role="status" aria-live="polite"></div>
+      <div style="margin-top:8px;"><a href="#" id="link-volver-login">Volver a iniciar sesión</a></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-nueva-password-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-nueva-password-title">
+  <div class="modal-card">
+    <h2 id="modal-nueva-password-title">Crea tu contraseña</h2>
+    <p class="modal-sub">Escribe la contraseña que vas a usar de ahora en adelante para entrar al panel.</p>
+    <div class="field">
+      <label for="np-pass1">Contraseña nueva</label>
+      <input type="password" id="np-pass1" autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label for="np-pass2">Repite la contraseña</label>
+      <input type="password" id="np-pass2" autocomplete="new-password">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btn-np-cancelar">Cancelar</button>
+      <button class="btn-save" id="btn-np-guardar">Guardar contraseña</button>
+    </div>
+    <div class="modal-msg" id="np-msg" role="status" aria-live="polite"></div>
   </div>
 </div>
 
@@ -625,7 +656,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-08-5';
+const APP_VERSION = '2026-10-08-6';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -707,6 +738,92 @@ async function doLogout(){
   window.location.reload();
 }
 
+/* ---------- Recuperar / crear contraseña ---------- */
+document.getElementById('link-olvide-pass').addEventListener('click', (e)=>{
+  e.preventDefault();
+  document.getElementById('recuperar-wrap').style.display = 'block';
+  document.getElementById('recuperar-msg').textContent = '';
+});
+document.getElementById('link-volver-login').addEventListener('click', (e)=>{
+  e.preventDefault();
+  document.getElementById('recuperar-wrap').style.display = 'none';
+});
+document.getElementById('btn-enviar-recuperacion').addEventListener('click', async ()=>{
+  const email = document.getElementById('login-email').value.trim();
+  const msg = document.getElementById('recuperar-msg');
+  const btn = document.getElementById('btn-enviar-recuperacion');
+  if(!email){
+    msg.style.color = 'var(--red-700)';
+    msg.textContent = 'Escribe tu correo arriba primero.';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  msg.style.color = 'var(--ink-soft)';
+  msg.textContent = '';
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  btn.disabled = false; btn.textContent = 'Enviar enlace de recuperación';
+  if(error){
+    msg.style.color = 'var(--red-700)';
+    msg.textContent = 'No se pudo enviar el correo. Intenta de nuevo.';
+    console.error(error);
+    return;
+  }
+  msg.style.color = 'var(--green-700)';
+  msg.textContent = 'Listo. Revisa tu correo (y la carpeta de spam) para el enlace.';
+});
+
+// Supabase detecta sola el enlace de recuperación en la URL y dispara este
+// evento; ahí abrimos el modal para que la persona escriba su contraseña
+// nueva (sirve tanto para "olvidé mi contraseña" como para una invitación).
+sb.auth.onAuthStateChange((event) => {
+  if(event === 'PASSWORD_RECOVERY'){
+    document.getElementById('modal-nueva-password-overlay').classList.add('open');
+  }
+});
+
+document.getElementById('btn-cambiar-pass').addEventListener('click', ()=>{
+  document.getElementById('np-pass1').value = '';
+  document.getElementById('np-pass2').value = '';
+  document.getElementById('np-msg').textContent = '';
+  document.getElementById('modal-nueva-password-overlay').classList.add('open');
+});
+document.getElementById('btn-np-cancelar').addEventListener('click', ()=>{
+  document.getElementById('modal-nueva-password-overlay').classList.remove('open');
+});
+document.getElementById('btn-np-guardar').addEventListener('click', async ()=>{
+  const p1 = document.getElementById('np-pass1').value;
+  const p2 = document.getElementById('np-pass2').value;
+  const msg = document.getElementById('np-msg');
+  const btn = document.getElementById('btn-np-guardar');
+  if(p1.length < 6){
+    msg.style.color = 'var(--red-700)';
+    msg.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+    return;
+  }
+  if(p1 !== p2){
+    msg.style.color = 'var(--red-700)';
+    msg.textContent = 'Las dos contraseñas no coinciden.';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  const { error } = await sb.auth.updateUser({ password: p1 });
+  btn.disabled = false; btn.textContent = 'Guardar contraseña';
+  if(error){
+    msg.style.color = 'var(--red-700)';
+    msg.textContent = 'No se pudo guardar. Intenta de nuevo.';
+    console.error(error);
+    return;
+  }
+  msg.style.color = 'var(--green-700)';
+  msg.textContent = 'Contraseña actualizada ✓';
+  setTimeout(()=>{
+    document.getElementById('modal-nueva-password-overlay').classList.remove('open');
+    window.location.reload();
+  }, 1200);
+});
+
 async function afterLogin(){
   const { data: { user } } = await sb.auth.getUser();
   if(!user){ return; }
@@ -727,6 +844,7 @@ async function afterLogin(){
   document.getElementById('login-wrap').style.display = 'none';
   document.getElementById('btn-logout').style.display = 'inline-block';
   document.getElementById('btn-presencial').style.display = 'inline-block';
+  document.getElementById('btn-cambiar-pass').style.display = 'inline-block';
   document.getElementById('btn-actividades').style.display = 'inline-block';
   document.getElementById('btn-dashboard').style.display = 'inline-block';
   document.getElementById('btn-exportar-excel').style.display = 'inline-block';
