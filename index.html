@@ -331,6 +331,12 @@
   .pago-fecha{font-size:14px;line-height:1.45;margin:4px 0 0;}
   .pago-fecha .pago-nota{display:block;font-size:12.5px;color:var(--ink-soft);}
   .pago-vacio{font-size:13.5px;color:var(--ink-soft);margin:4px 0 0;}
+  .pago-selector{display:flex;flex-direction:column;gap:10px;}
+  .pago-opcion{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
+    padding:14px 16px;border:2px solid var(--green-700);border-radius:8px;background:var(--white);
+    color:var(--green-900);font:inherit;font-size:15px;font-weight:700;cursor:pointer;text-align:left;}
+  .pago-opcion:hover,.pago-opcion:focus-visible{background:var(--green-700);color:var(--white);}
+  .pago-opcion span{font-size:20px;line-height:1;}
 
   .chat-panel{
     position:fixed;right:18px;bottom:calc(86px + var(--safe-bottom));
@@ -1315,29 +1321,72 @@ function estadoPagoPrograma(clave){
   return { tipo: 'sin_fechas', nota: '', fechas: [] };
 }
 
-function renderFechasPagoHTML(){
-  if(fechasPago === null){
-    return '<p class="info-nota">No pudimos consultar las fechas de pago en este momento. Intenta de nuevo en unos minutos, o radica tu solicitud y un funcionario te responderá.</p>';
+// Registra UNA atención anónima de autoservicio por programa y sesión del navegador.
+const AUTOSERVICIO_PREFIJO = 'autoservicio_pagos_';
+function registrarConsultaAutoservicio(clave, canal){
+  try{
+    const k = AUTOSERVICIO_PREFIJO + clave;
+    if(sessionStorage.getItem(k)) return;
+    sessionStorage.setItem(k, '1');
+  }catch(e){ /* sin sessionStorage: se registra igual */ }
+  try{
+    Promise.resolve(sb.from('consultas_autoservicio').insert({ programa: clave, canal: canal, tipo: 'fechas_pago' }))
+      .catch(() => {});
+  }catch(e){}
+}
+
+function programaPagoPorClave(clave){
+  return PROGRAMAS_PAGO.find(p => p.clave === clave) || null;
+}
+
+function htmlSelectorProgramasPago(){
+  return '<p class="info-nota" style="margin-top:0">Elige el programa para ver sus fechas de pago:</p>' +
+    '<div class="pago-selector">' +
+    PROGRAMAS_PAGO.map(p =>
+      '<button type="button" class="pago-opcion" onclick="verFechasPagoPrograma(\'' + p.clave.replace(/'/g, "\\'") + '\')">' +
+      escapeHtml(p.nombre) + '<span aria-hidden="true">›</span></button>'
+    ).join('') + '</div>';
+}
+
+function htmlDetallePagoPrograma(clave){
+  const p = programaPagoPorClave(clave);
+  if(!p) return htmlSelectorProgramasPago();
+  const est = estadoPagoPrograma(p.clave);
+  let badge, cuerpo;
+  if(est.tipo === 'proximas'){
+    badge = '<span class="pago-badge prox">Próximo pago</span>';
+    cuerpo = est.fechas.map(f =>
+      '<p class="pago-fecha"><strong>' + escapeHtml(rangoPagoLegible(f.fecha_inicio, f.fecha_fin)) + '</strong>' +
+      (f.nota ? '<span class="pago-nota">' + escapeHtml(f.nota) + '</span>' : '') + '</p>'
+    ).join('');
+  } else if(est.tipo === 'sin_pagos'){
+    badge = '<span class="pago-badge sin">Sin pagos por ahora</span>';
+    cuerpo = '<p class="pago-vacio">' + escapeHtml(est.nota || MSG_SIN_PAGOS_DEFECTO) + '</p>';
+  } else {
+    badge = '<span class="pago-badge nada">Sin fechas</span>';
+    cuerpo = '<p class="pago-vacio">' + escapeHtml(MSG_SIN_PAGOS_DEFECTO) + '</p>';
   }
-  const tarjetas = PROGRAMAS_PAGO.map(p => {
-    const est = estadoPagoPrograma(p.clave);
-    let badge, cuerpo;
-    if(est.tipo === 'proximas'){
-      badge = '<span class="pago-badge prox">Próximo pago</span>';
-      cuerpo = est.fechas.map(f =>
-        '<p class="pago-fecha"><strong>' + escapeHtml(rangoPagoLegible(f.fecha_inicio, f.fecha_fin)) + '</strong>' +
-        (f.nota ? '<span class="pago-nota">' + escapeHtml(f.nota) + '</span>' : '') + '</p>'
-      ).join('');
-    } else if(est.tipo === 'sin_pagos'){
-      badge = '<span class="pago-badge sin">Sin pagos por ahora</span>';
-      cuerpo = '<p class="pago-vacio">' + escapeHtml(est.nota || MSG_SIN_PAGOS_DEFECTO) + '</p>';
-    } else {
-      badge = '<span class="pago-badge nada">Sin fechas</span>';
-      cuerpo = '<p class="pago-vacio">' + escapeHtml(MSG_SIN_PAGOS_DEFECTO) + '</p>';
-    }
-    return '<div class="pago-card"><div class="pago-card-head"><strong>' + escapeHtml(p.nombre) + '</strong>' + badge + '</div>' + cuerpo + '</div>';
-  }).join('');
-  return tarjetas + '<p class="info-nota">Las fechas pueden cambiar según la programación nacional. Si tienes dudas sobre tu caso, radica tu solicitud y un funcionario te responderá.</p>';
+  return '<div class="pago-card"><div class="pago-card-head"><strong>' + escapeHtml(p.nombre) + '</strong>' + badge + '</div>' + cuerpo + '</div>' +
+    '<button type="button" class="btn btn-ghost" onclick="mostrarSelectorPagos()">← Consultar otro programa</button>' +
+    '<p class="info-nota">Las fechas pueden cambiar según la programación nacional. Si tienes dudas sobre tu caso, radica tu solicitud y un funcionario te responderá.</p>';
+}
+
+function htmlErrorPagos(){
+  return '<p class="info-nota">No pudimos consultar las fechas de pago en este momento. Intenta de nuevo en unos minutos, o radica tu solicitud y un funcionario te responderá.</p>';
+}
+
+function mostrarSelectorPagos(){
+  const cuerpo = document.getElementById('pagos-cuerpo');
+  cuerpo.innerHTML = fechasPago === null ? htmlErrorPagos() : htmlSelectorProgramasPago();
+  cuerpo.scrollTop = 0;
+}
+
+function verFechasPagoPrograma(clave){
+  const cuerpo = document.getElementById('pagos-cuerpo');
+  if(fechasPago === null){ cuerpo.innerHTML = htmlErrorPagos(); return; }
+  cuerpo.innerHTML = htmlDetallePagoPrograma(clave);
+  cuerpo.scrollTop = 0;
+  registrarConsultaAutoservicio(clave, 'portal');
 }
 
 async function abrirFechasPago(){
@@ -1346,8 +1395,7 @@ async function abrirFechasPago(){
   document.getElementById('pagos-overlay').classList.add('open');
   fechasPagoAbierto = true;
   await cargarFechasPagoPortal();
-  cuerpo.innerHTML = renderFechasPagoHTML();
-  cuerpo.scrollTop = 0;
+  mostrarSelectorPagos();
 }
 
 function cerrarFechasPago(){
@@ -1355,21 +1403,19 @@ function cerrarFechasPago(){
   fechasPagoAbierto = false;
 }
 
-// Mismo contenido, en texto plano, para el chat y para el asistente.
-function textoFechasPago(){
-  if(fechasPago === null) return null;
-  const lineas = PROGRAMAS_PAGO.map(p => {
-    const est = estadoPagoPrograma(p.clave);
-    if(est.tipo === 'proximas'){
-      const items = est.fechas.map(f => '   – ' + rangoPagoLegible(f.fecha_inicio, f.fecha_fin) + (f.nota ? ' (' + f.nota + ')' : '')).join('\n');
-      return '• ' + p.nombre + ':\n' + items;
-    }
-    if(est.tipo === 'sin_pagos'){
-      return '• ' + p.nombre + ': por el momento no hay pagos programados.' + (est.nota ? ' ' + est.nota : '');
-    }
-    return '• ' + p.nombre + ': por el momento no hay fechas de pago programadas.';
-  });
-  return lineas.join('\n\n');
+// Texto plano de UN programa, para el chat.
+function textoFechasPagoPrograma(clave){
+  const p = programaPagoPorClave(clave);
+  if(!p || fechasPago === null) return null;
+  const est = estadoPagoPrograma(p.clave);
+  if(est.tipo === 'proximas'){
+    const items = est.fechas.map(f => '– ' + rangoPagoLegible(f.fecha_inicio, f.fecha_fin) + (f.nota ? ' (' + f.nota + ')' : '')).join('\n');
+    return '📅 ' + p.nombre + ' — próximas fechas de pago:\n\n' + items;
+  }
+  if(est.tipo === 'sin_pagos'){
+    return '📅 ' + p.nombre + ': ' + (est.nota || MSG_SIN_PAGOS_DEFECTO);
+  }
+  return '📅 ' + p.nombre + ': ' + MSG_SIN_PAGOS_DEFECTO;
 }
 
 document.addEventListener('keydown', (e) => {
@@ -1492,7 +1538,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-21-1';
+const APP_VERSION = '2026-10-21-2';
 let avisoVersionMostrado = false;
 
 /* ============================================================
@@ -1953,6 +1999,12 @@ function goMenu(){
   showTextInput('Escribe tu pregunta…');
 }
 
+function chipsProgramasPago(){
+  return PROGRAMAS_PAGO.map(p => ({ label: p.nombre, value: 'PAGO:' + p.clave })).concat([
+    {label:'Volver al menú', value:'MENU'},
+  ]);
+}
+
 async function goFechasPago(){
   chatState = 'FECHAS_PAGO';
   hideTextInput();
@@ -1960,13 +2012,27 @@ async function goFechasPago(){
   const burbuja = addTypingBubble();
   await cargarFechasPagoPortal();
   burbuja.remove();
-  const texto = textoFechasPago();
-  if(texto === null){
+  if(fechasPago === null){
     addMsg('No pude consultar las fechas de pago en este momento. Intenta de nuevo en unos minutos, o radica tu solicitud y un funcionario te responderá.', 'bot');
-  } else {
-    addMsg('📅 Fechas de pago\n\n' + texto + '\n\nLas fechas pueden cambiar según la programación nacional. Si tienes dudas sobre tu caso, radica tu solicitud y un funcionario te responderá.', 'bot');
+    setChips([
+      {label:'Radicar una solicitud', value:'RADICAR'},
+      {label:'Volver al menú', value:'MENU'},
+    ]);
+    return;
   }
+  addMsg('📅 ¿De qué programa quieres ver las fechas de pago?', 'bot');
+  setChips(chipsProgramasPago());
+}
+
+function goFechasPagoPrograma(clave){
+  const texto = textoFechasPagoPrograma(clave);
+  if(texto === null) return goFechasPago();
+  const p = programaPagoPorClave(clave);
+  addMsg(p.nombre, 'user');
+  addMsg(texto + '\n\nLas fechas pueden cambiar según la programación nacional. Si tienes dudas sobre tu caso, radica tu solicitud y un funcionario te responderá.', 'bot');
+  registrarConsultaAutoservicio(clave, 'chat');
   setChips([
+    {label:'Consultar otro programa', value:'OTRO_PAGO'},
     {label:'Radicar una solicitud', value:'RADICAR'},
     {label:'Volver al menú', value:'MENU'},
   ]);
@@ -2043,6 +2109,8 @@ function handleChip(value){
     if(value==='VOLVER') return goMenu();
   }
   if(chatState==='FECHAS_PAGO'){
+    if(typeof value === 'string' && value.startsWith('PAGO:')) return goFechasPagoPrograma(value.slice(5));
+    if(value==='OTRO_PAGO') return goFechasPago();
     if(value==='MENU') return goMenu();
     if(value==='RADICAR') return goRadicarOficina();
   }

@@ -272,6 +272,8 @@ let esCoordinador = false;
 let solicitudesData = [];
 let actividadesData = [];
 let encuestasData = [];
+let autoservicioData = [];     // consultas de fechas de pago sin radicar
+let perfilesProgramas = [];    // [{id,nombre,programas[]}]
 let funcionariosMap = {};     // id -> nombre
 let nombreAId = {};           // nombre -> id
 
@@ -310,12 +312,18 @@ async function cargarTodo(){
   const btn = document.getElementById('btn-actualizar');
   btn.disabled = true; btn.textContent = 'Actualizando…';
   try{
-    const [solRes, actRes, encRes, perfRes] = await Promise.all([
+    const [solRes, actRes, encRes, perfRes, autoRes] = await Promise.all([
       sb.from('solicitudes').select('*'),
       sb.from('actividades_administrativas').select('*'),
       sb.from('encuestas_satisfaccion').select('*'),
-      sb.from('perfiles_funcionario').select('id, nombre'),
+      sb.from('perfiles_funcionario').select('*'),
+      sb.from('consultas_autoservicio').select('programa, canal, creado_en'),
     ]);
+    autoservicioData = (autoRes && autoRes.data) || [];
+    perfilesProgramas = (perfRes.data || []).map(p => ({
+      id: p.id, nombre: p.nombre,
+      programas: (Array.isArray(p.programas) && p.programas.length) ? p.programas : (p.programa ? [p.programa] : []),
+    }));
     solicitudesData = solRes.data || [];
     actividadesData = actRes.data || [];
     encuestasData = encRes.data || [];
@@ -825,6 +833,50 @@ function irAAmbito(valor){
 /* ============================================================
    Render principal
 ============================================================ */
+/* ============================================================
+   Atenciones de autoservicio (consultas de fechas de pago sin radicar)
+============================================================ */
+function responsablesDePrograma(prog){
+  const directos = perfilesProgramas.filter(p => p.programas.includes(prog)).map(p => p.nombre);
+  if(directos.length) return directos;
+  return perfilesProgramas.filter(p => p.programas.includes('TODAS')).map(p => p.nombre);
+}
+
+function construirSeccionAutoservicio(programasAmbito){
+  const lista = programasAmbito.filter(p => autoservicioData.some(a => a.programa === p) || ['Adulto Mayor','Renta Ciudadana','Renta Joven','Devolución del IVA'].includes(p));
+  const filas = lista.map(p => ({
+    programa: p,
+    total: autoservicioData.filter(a => a.programa === p).length,
+    portal: autoservicioData.filter(a => a.programa === p && a.canal === 'portal').length,
+    chat: autoservicioData.filter(a => a.programa === p && a.canal === 'chat').length,
+    resp: responsablesDePrograma(p),
+  })).sort((a,b) => b.total - a.total);
+  const total = filas.reduce((s,f) => s + f.total, 0);
+  let h = `<div class="seccion"><h2>Atenciones de autoservicio</h2>`;
+  h += `<p class="seccion-sub">Ciudadanos que consultaron las fechas de pago de un programa y se atendieron solos: sin radicar solicitud y sin intervención del funcionario. Cada consulta cuenta como 1 atención para el responsable del programa.</p>`;
+  h += `<p><strong style="font-size:1.6em">${total}</strong> atenciones de autoservicio en este ámbito</p>`;
+  if(!filas.length){ return h + `<p class="vacio-aviso">Sin datos todavía.</p></div>`; }
+  h += `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:14px">`;
+  h += `<tr style="text-align:left;border-bottom:2px solid var(--line,#ddd)"><th style="padding:6px">Programa</th><th style="padding:6px">Responsable(s)</th><th style="padding:6px">Atenciones</th><th style="padding:6px">Portal / Chat</th></tr>`;
+  filas.forEach(f => {
+    h += `<tr style="border-bottom:1px solid var(--line,#eee)"><td style="padding:6px">${f.programa}</td><td style="padding:6px">${f.resp.length ? f.resp.join(', ') : '—'}</td><td style="padding:6px"><strong>${f.total}</strong></td><td style="padding:6px">${f.portal} / ${f.chat}</td></tr>`;
+  });
+  h += `</table></div></div>`;
+  return h;
+}
+
+function programasParaAutoservicio(ambito){
+  const v = ambito.val;
+  if(v.startsWith('programa:')) return [v.slice('programa:'.length)];
+  let progs;
+  if(v === 'yo') progs = perfil.misProgramas;
+  else if(v.startsWith('funcionario:')){
+    const p = perfilesProgramas.find(x => x.nombre === v.slice('funcionario:'.length));
+    progs = p ? p.programas : [];
+  } else progs = esCoordinador ? ['TODAS'] : perfil.misProgramas;
+  return progs.includes('TODAS') ? PROGRAMAS : progs;
+}
+
 function renderDashboard(){
   const sel = document.getElementById('sel-ambito');
   if(sel.value === 'actividades'){
@@ -852,6 +904,8 @@ function renderDashboard(){
     html += construirSeccionActividades(ambito.actividadesScope);
     html += `</div>`;
   }
+
+  html += construirSeccionAutoservicio(programasParaAutoservicio(ambito));
 
   html += `<div class="seccion"><h2>Resumen en palabras simples</h2>`;
   html += `<div class="resumen-texto">${construirResumenTexto(ambito, kpis)}</div>`;
