@@ -275,6 +275,7 @@
       </div>
       <button class="btn-ghost" id="btn-apariencia" style="display:none;">🎨 Apariencia</button>
       <button class="btn-ghost" id="btn-avisos" style="display:none;">📅 Días sin atención</button>
+      <button class="btn-ghost" id="btn-pagos" style="display:none;">💰 Fechas de pago</button>
       <button class="btn-ghost" id="btn-documentos" style="display:none;">📁 Documentos</button>
       <button class="btn-ghost" id="btn-actividades" style="display:none;">📋 Registrar actividad</button>
       <a class="btn-ghost" id="btn-dashboard" href="dashboard.html" style="display:none;text-decoration:none;">📈 Indicadores</a>
@@ -493,6 +494,57 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-pagos-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-pagos-title">
+  <div class="modal-card">
+    <h2 id="modal-pagos-title">Fechas de pago</h2>
+    <p class="modal-sub">Programa las fechas de pago de cada programa. Los ciudadanos las ven en el botón "Fechas de pago" del portal y en el chat. Si por ahora no hay pagos, márcalo para que sepan que no necesitan consultar.</p>
+
+    <div class="field">
+      <label for="pg-programa">Programa</label>
+      <select id="pg-programa"></select>
+    </div>
+
+    <div style="border:1px solid var(--line);border-radius:6px;padding:12px;margin:12px 0;">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;cursor:pointer;">
+        <input type="checkbox" id="pg-sin-pagos"> No hay pagos programados por el momento
+      </label>
+      <div class="field" id="pg-sin-pagos-msg-wrap" style="display:none;margin-top:10px;">
+        <label for="pg-sin-pagos-msg">Mensaje para el ciudadano (opcional)</label>
+        <input type="text" id="pg-sin-pagos-msg" maxlength="200" placeholder="Ej: Estamos a la espera de la programación del próximo ciclo.">
+      </div>
+      <div class="modal-actions" style="justify-content:flex-start;margin-top:10px;">
+        <button class="btn-save" id="btn-pg-guardar-estado">Guardar aviso</button>
+      </div>
+    </div>
+
+    <h3 style="font-size:14px;margin:6px 0 8px;">Fechas programadas</h3>
+    <div id="pg-lista" style="display:flex;flex-direction:column;gap:8px;"></div>
+
+    <h3 style="font-size:14px;margin:16px 0 8px;">Agregar una fecha</h3>
+    <div class="modal-row2">
+      <div class="field">
+        <label for="pg-inicio">Fecha (o inicio)</label>
+        <input type="date" id="pg-inicio">
+      </div>
+      <div class="field">
+        <label for="pg-fin">Hasta (opcional)</label>
+        <input type="date" id="pg-fin">
+      </div>
+    </div>
+    <div class="field">
+      <label for="pg-nota">Nota (opcional)</label>
+      <input type="text" id="pg-nota" maxlength="200" placeholder="Ej: Ciclo 5, pago en el Banco Agrario de 8:00 a 4:00">
+    </div>
+    <div class="modal-actions" style="justify-content:flex-start;">
+      <button class="btn-save" id="btn-pg-agregar">Agregar fecha</button>
+    </div>
+    <div class="modal-msg" id="pg-msg" role="status" aria-live="polite"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btn-pg-cerrar">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal-card">
     <h2 id="modal-title">Iniciar atención presencial</h2>
@@ -665,7 +717,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-17-2';
+const APP_VERSION = '2026-10-21-1';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -859,6 +911,9 @@ async function afterLogin(){
   document.getElementById('btn-exportar-excel').style.display = 'inline-block';
   if(user.email === 'orejuelaaguiarjhonatan@gmail.com'){
     document.getElementById('btn-borrar-prueba').style.display = 'inline-block';
+  }
+  if(esCoordinador || user.email === 'orejuelaaguiarjhonatan@gmail.com'){
+    document.getElementById('btn-pagos').style.display = 'inline-block';
   }
   if(esCoordinador){
     document.getElementById('btn-avisos').style.display = 'inline-block';
@@ -1605,6 +1660,160 @@ async function agregarAviso(){
 async function eliminarAviso(id){
   await sb.from('avisos_no_laborales').delete().eq('id', id);
   await cargarAvisos();
+}
+
+/* ============================================================
+   Fechas de pago por programa — coordinación / desarrollador
+   Se muestran a los ciudadanos en el portal (botón "Fechas de pago")
+   y en el chat. Por programa: fechas (o rangos) de pago, o el aviso
+   "no hay pagos por el momento".
+============================================================ */
+const PROGRAMAS_PAGO = [
+  { clave: 'Adulto Mayor',       nombre: 'Colombia Mayor (Adulto Mayor)' },
+  { clave: 'Renta Ciudadana',    nombre: 'Renta Ciudadana' },
+  { clave: 'Renta Joven',        nombre: 'Renta Joven' },
+  { clave: 'Devolución del IVA', nombre: 'Devolución del IVA' },
+];
+const MESES_PAGO = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+let fechasPagoCache = [];
+
+function hoyLocalISO(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function fechaPagoLegible(iso){
+  const [y, m, d] = String(iso).split('-').map(Number);
+  return d + ' de ' + MESES_PAGO[m-1] + ' de ' + y;
+}
+
+function rangoPagoLegible(ini, fin){
+  if(!fin || fin === ini) return fechaPagoLegible(ini);
+  const [y1, m1, d1] = ini.split('-').map(Number);
+  const [y2, m2, d2] = fin.split('-').map(Number);
+  if(y1 === y2 && m1 === m2) return 'del ' + d1 + ' al ' + d2 + ' de ' + MESES_PAGO[m2-1] + ' de ' + y2;
+  if(y1 === y2) return 'del ' + d1 + ' de ' + MESES_PAGO[m1-1] + ' al ' + d2 + ' de ' + MESES_PAGO[m2-1] + ' de ' + y2;
+  return 'del ' + fechaPagoLegible(ini) + ' al ' + fechaPagoLegible(fin);
+}
+
+document.getElementById('btn-pagos').addEventListener('click', abrirModalPagos);
+document.getElementById('btn-pg-cerrar').addEventListener('click', cerrarModalPagos);
+document.getElementById('btn-pg-agregar').addEventListener('click', agregarFechaPago);
+document.getElementById('btn-pg-guardar-estado').addEventListener('click', guardarEstadoSinPagos);
+document.getElementById('pg-programa').addEventListener('change', ()=>{
+  document.getElementById('pg-msg').textContent = '';
+  renderFechasPago();
+});
+document.getElementById('pg-sin-pagos').addEventListener('change', (e)=>{
+  document.getElementById('pg-sin-pagos-msg-wrap').style.display = e.target.checked ? 'block' : 'none';
+});
+document.getElementById('modal-pagos-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'modal-pagos-overlay') cerrarModalPagos();
+});
+
+async function abrirModalPagos(){
+  const sel = document.getElementById('pg-programa');
+  if(!sel.options.length){
+    sel.innerHTML = PROGRAMAS_PAGO.map(p => `<option value="${escapeHtml(p.clave)}">${escapeHtml(p.nombre)}</option>`).join('');
+  }
+  document.getElementById('pg-msg').textContent = '';
+  document.getElementById('pg-inicio').value = '';
+  document.getElementById('pg-fin').value = '';
+  document.getElementById('pg-nota').value = '';
+  document.getElementById('modal-pagos-overlay').classList.add('open');
+  await cargarFechasPago();
+}
+
+function cerrarModalPagos(){
+  document.getElementById('modal-pagos-overlay').classList.remove('open');
+}
+
+async function cargarFechasPago(){
+  const { data, error } = await sb.from('fechas_pago').select('*').order('fecha_inicio', { ascending: true });
+  if(error){
+    document.getElementById('pg-lista').innerHTML = '<div class="empty-state">No se pudo cargar. ¿Ya ejecutaste sql_fechas_pago.sql en Supabase?</div>';
+    return;
+  }
+  fechasPagoCache = data || [];
+  renderFechasPago();
+}
+
+function renderFechasPago(){
+  const programa = document.getElementById('pg-programa').value;
+  const filas = fechasPagoCache.filter(f => f.programa === programa);
+  const sinPagos = filas.find(f => f.tipo === 'sin_pagos');
+  const fechas = filas.filter(f => f.tipo === 'fecha');
+  const hoy = hoyLocalISO();
+
+  document.getElementById('pg-sin-pagos').checked = !!sinPagos;
+  document.getElementById('pg-sin-pagos-msg-wrap').style.display = sinPagos ? 'block' : 'none';
+  document.getElementById('pg-sin-pagos-msg').value = sinPagos ? (sinPagos.nota || '') : '';
+
+  const wrap = document.getElementById('pg-lista');
+  if(fechas.length === 0){
+    wrap.innerHTML = '<div class="empty-state">No hay fechas programadas para este programa.</div>';
+    return;
+  }
+  wrap.innerHTML = fechas.map(f => {
+    const pasada = (f.fecha_fin || f.fecha_inicio) < hoy;
+    return `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;${pasada ? 'opacity:.55;' : ''}">
+      <div>
+        <div style="font-weight:600;font-size:13.5px;">${escapeHtml(rangoPagoLegible(f.fecha_inicio, f.fecha_fin))}${pasada ? ' <span style="font-weight:400;font-size:12px;">(ya pasó)</span>' : ''}</div>
+        <div style="font-size:12px;color:var(--ink-soft);">${escapeHtml(f.nota || 'Sin nota')}</div>
+      </div>
+      <button class="btn-small" style="background:var(--red-700);color:#fff;" onclick="eliminarFechaPago('${f.id}')">Eliminar</button>
+    </div>`;
+  }).join('');
+}
+
+async function agregarFechaPago(){
+  const programa = document.getElementById('pg-programa').value;
+  const inicio = document.getElementById('pg-inicio').value;
+  const fin = document.getElementById('pg-fin').value;
+  const nota = document.getElementById('pg-nota').value.trim();
+  const msg = document.getElementById('pg-msg');
+  if(!inicio){ msg.textContent = 'Elige la fecha (o la fecha de inicio).'; return; }
+  if(fin && fin < inicio){ msg.textContent = 'La fecha final no puede ser anterior a la inicial.'; return; }
+  msg.textContent = 'Guardando…';
+  const { data: { user } } = await sb.auth.getUser();
+  const { error } = await sb.from('fechas_pago').insert({
+    programa, tipo: 'fecha', fecha_inicio: inicio, fecha_fin: fin || null,
+    nota: nota || null, creado_por: user ? user.email : null,
+  });
+  if(error){ msg.textContent = 'Error al guardar: ' + error.message; return; }
+  msg.textContent = 'Fecha agregada.';
+  document.getElementById('pg-inicio').value = '';
+  document.getElementById('pg-fin').value = '';
+  document.getElementById('pg-nota').value = '';
+  await cargarFechasPago();
+}
+
+async function eliminarFechaPago(id){
+  const msg = document.getElementById('pg-msg');
+  const { error } = await sb.from('fechas_pago').delete().eq('id', id);
+  msg.textContent = error ? ('Error al eliminar: ' + error.message) : 'Fecha eliminada.';
+  await cargarFechasPago();
+}
+
+async function guardarEstadoSinPagos(){
+  const programa = document.getElementById('pg-programa').value;
+  const marcado = document.getElementById('pg-sin-pagos').checked;
+  const nota = document.getElementById('pg-sin-pagos-msg').value.trim();
+  const msg = document.getElementById('pg-msg');
+  msg.textContent = 'Guardando…';
+  // Siempre limpiamos el aviso anterior de este programa; si está marcado, creamos el nuevo.
+  const { error: errDel } = await sb.from('fechas_pago').delete().eq('programa', programa).eq('tipo', 'sin_pagos');
+  if(errDel){ msg.textContent = 'Error al guardar: ' + errDel.message; return; }
+  if(marcado){
+    const { data: { user } } = await sb.auth.getUser();
+    const { error } = await sb.from('fechas_pago').insert({
+      programa, tipo: 'sin_pagos', nota: nota || null, creado_por: user ? user.email : null,
+    });
+    if(error){ msg.textContent = 'Error al guardar: ' + error.message; await cargarFechasPago(); return; }
+  }
+  msg.textContent = marcado ? 'Aviso guardado: los ciudadanos verán que no hay pagos por el momento.' : 'Aviso quitado: se muestran las fechas programadas.';
+  await cargarFechasPago();
 }
 
 /* ============================================================

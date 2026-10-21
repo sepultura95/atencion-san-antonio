@@ -246,7 +246,7 @@
     display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex:none;
   }
   .info-box-head .et{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;opacity:.85;}
-  .info-box-head h2{font-size:19px;margin:4px 0 0;line-height:1.3;}
+  .info-box-head h2{font-size:19px;margin:4px 0 0;line-height:1.3;color:var(--white);}
   .info-box-close{
     background:rgba(255,255,255,0.18);border:none;color:#fff;width:30px;height:30px;border-radius:50%;
     font-size:18px;line-height:1;cursor:pointer;flex:none;
@@ -305,6 +305,32 @@
     position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;
     background:var(--ochre-500);border:2px solid var(--paper);
   }
+
+  /* ---------- Botón "Fechas de pago" (al lado del chat) ---------- */
+  .pagos-launcher{
+    position:fixed;right:86px;
+    bottom:calc(25px + var(--safe-bottom));
+    height:44px;padding:0 16px;border-radius:999px;
+    background:var(--white);color:var(--green-700);
+    border:2px solid var(--green-700);
+    box-shadow:0 6px 18px rgba(22,58,47,0.22);
+    cursor:pointer;z-index:49;
+    display:flex;align-items:center;gap:7px;
+    font:inherit;font-size:13.5px;font-weight:700;
+  }
+  .pagos-launcher:hover{background:var(--green-700);color:var(--white);}
+
+  /* ---------- Ventana de fechas de pago ---------- */
+  .pago-card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:0 0 12px;background:var(--white);}
+  .pago-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+  .pago-card-head strong{font-size:15px;}
+  .pago-badge{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap;}
+  .pago-badge.prox{background:#dcecdf;color:#1f5a35;}
+  .pago-badge.sin{background:var(--ochre-100);color:var(--green-900);}
+  .pago-badge.nada{background:var(--paper-dim);color:var(--ink-soft);}
+  .pago-fecha{font-size:14px;line-height:1.45;margin:4px 0 0;}
+  .pago-fecha .pago-nota{display:block;font-size:12.5px;color:var(--ink-soft);}
+  .pago-vacio{font-size:13.5px;color:var(--ink-soft);margin:4px 0 0;}
 
   .chat-panel{
     position:fixed;right:18px;bottom:calc(86px + var(--safe-bottom));
@@ -535,6 +561,7 @@
     .offices{grid-template-columns:1fr;margin-bottom:34px;}
 
     .chat-launcher{right:14px;width:54px;height:54px;font-size:22px;}
+    .pagos-launcher{right:78px;bottom:calc(24px + var(--safe-bottom));height:42px;padding:0 13px;font-size:13px;}
     .chat-panel{
       right:0;left:0;bottom:0;top:0;
       width:100vw;height:100%;max-height:none;
@@ -752,6 +779,25 @@
       <div class="info-box-foot">
         <button class="btn btn-ghost" onclick="cerrarPoliticaDatos()">Cerrar</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== FECHAS DE PAGO ===================== -->
+<button class="pagos-launcher" id="pagos-launcher" onclick="abrirFechasPago()" aria-haspopup="dialog">📅 Fechas de pago</button>
+<div class="info-overlay" id="pagos-overlay" onclick="if(event.target===this) cerrarFechasPago()">
+  <div class="info-box" role="dialog" aria-modal="true" aria-labelledby="pagos-titulo">
+    <div class="info-box-head">
+      <div>
+        <div class="et">Programas de transferencias</div>
+        <h2 id="pagos-titulo">Fechas de pago</h2>
+      </div>
+      <button class="info-box-close" onclick="cerrarFechasPago()" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="info-box-body" id="pagos-cuerpo"></div>
+    <div class="info-box-foot">
+      <button class="btn btn-primary" onclick="cerrarFechasPago(); openChat(); botStart('RADICAR')">Radicar una solicitud</button>
+      <button class="btn btn-ghost" onclick="cerrarFechasPago()">Cerrar</button>
     </div>
   </div>
 </div>
@@ -1210,10 +1256,127 @@ function cerrarPoliticaDatos(){
   politicaDatosAbierta = false;
 }
 
+/* ============================================================
+   Fechas de pago (Colombia Mayor, Renta Ciudadana, Renta Joven, IVA)
+   Las programa coordinación desde el panel. Aquí solo se consultan.
+============================================================ */
+const PROGRAMAS_PAGO = [
+  { clave: 'Adulto Mayor',       nombre: 'Colombia Mayor (Adulto Mayor)' },
+  { clave: 'Renta Ciudadana',    nombre: 'Renta Ciudadana' },
+  { clave: 'Renta Joven',        nombre: 'Renta Joven' },
+  { clave: 'Devolución del IVA', nombre: 'Devolución del IVA' },
+];
+const MESES_PAGO = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MSG_SIN_PAGOS_DEFECTO = 'Por el momento no hay pagos programados para este programa. No necesitas hacer consultas por ahora: cuando haya fechas, las verás aquí.';
+let fechasPago = null;        // null = aún no cargadas o con error
+let fechasPagoAbierto = false;
+
+function hoyISOPortal(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function fechaPagoLegible(iso){
+  const [y, m, d] = String(iso).split('-').map(Number);
+  return d + ' de ' + MESES_PAGO[m-1] + ' de ' + y;
+}
+
+function rangoPagoLegible(ini, fin){
+  if(!fin || fin === ini) return fechaPagoLegible(ini);
+  const [y1, m1, d1] = ini.split('-').map(Number);
+  const [y2, m2, d2] = fin.split('-').map(Number);
+  if(y1 === y2 && m1 === m2) return 'del ' + d1 + ' al ' + d2 + ' de ' + MESES_PAGO[m2-1] + ' de ' + y2;
+  if(y1 === y2) return 'del ' + d1 + ' de ' + MESES_PAGO[m1-1] + ' al ' + d2 + ' de ' + MESES_PAGO[m2-1] + ' de ' + y2;
+  return 'del ' + fechaPagoLegible(ini) + ' al ' + fechaPagoLegible(fin);
+}
+
+async function cargarFechasPagoPortal(){
+  try{
+    const { data, error } = await sb.from('fechas_pago').select('*').order('fecha_inicio', { ascending: true });
+    if(error) throw error;
+    fechasPago = data || [];
+    return true;
+  }catch(e){
+    fechasPago = null;
+    return false;
+  }
+}
+
+// Estado de un programa: 'sin_pagos' | 'proximas' | 'sin_fechas'
+function estadoPagoPrograma(clave){
+  const filas = (fechasPago || []).filter(f => f.programa === clave);
+  const sin = filas.find(f => f.tipo === 'sin_pagos');
+  if(sin) return { tipo: 'sin_pagos', nota: sin.nota || '', fechas: [] };
+  const hoy = hoyISOPortal();
+  const proximas = filas
+    .filter(f => f.tipo === 'fecha' && (f.fecha_fin || f.fecha_inicio) >= hoy)
+    .sort((a,b) => a.fecha_inicio < b.fecha_inicio ? -1 : 1);
+  if(proximas.length) return { tipo: 'proximas', nota: '', fechas: proximas };
+  return { tipo: 'sin_fechas', nota: '', fechas: [] };
+}
+
+function renderFechasPagoHTML(){
+  if(fechasPago === null){
+    return '<p class="info-nota">No pudimos consultar las fechas de pago en este momento. Intenta de nuevo en unos minutos, o radica tu solicitud y un funcionario te responderá.</p>';
+  }
+  const tarjetas = PROGRAMAS_PAGO.map(p => {
+    const est = estadoPagoPrograma(p.clave);
+    let badge, cuerpo;
+    if(est.tipo === 'proximas'){
+      badge = '<span class="pago-badge prox">Próximo pago</span>';
+      cuerpo = est.fechas.map(f =>
+        '<p class="pago-fecha"><strong>' + escapeHtml(rangoPagoLegible(f.fecha_inicio, f.fecha_fin)) + '</strong>' +
+        (f.nota ? '<span class="pago-nota">' + escapeHtml(f.nota) + '</span>' : '') + '</p>'
+      ).join('');
+    } else if(est.tipo === 'sin_pagos'){
+      badge = '<span class="pago-badge sin">Sin pagos por ahora</span>';
+      cuerpo = '<p class="pago-vacio">' + escapeHtml(est.nota || MSG_SIN_PAGOS_DEFECTO) + '</p>';
+    } else {
+      badge = '<span class="pago-badge nada">Sin fechas</span>';
+      cuerpo = '<p class="pago-vacio">' + escapeHtml(MSG_SIN_PAGOS_DEFECTO) + '</p>';
+    }
+    return '<div class="pago-card"><div class="pago-card-head"><strong>' + escapeHtml(p.nombre) + '</strong>' + badge + '</div>' + cuerpo + '</div>';
+  }).join('');
+  return tarjetas + '<p class="info-nota">Las fechas pueden cambiar según la programación nacional. Si tienes dudas sobre tu caso, radica tu solicitud y un funcionario te responderá.</p>';
+}
+
+async function abrirFechasPago(){
+  const cuerpo = document.getElementById('pagos-cuerpo');
+  cuerpo.innerHTML = '<p class="pago-vacio">Consultando fechas…</p>';
+  document.getElementById('pagos-overlay').classList.add('open');
+  fechasPagoAbierto = true;
+  await cargarFechasPagoPortal();
+  cuerpo.innerHTML = renderFechasPagoHTML();
+  cuerpo.scrollTop = 0;
+}
+
+function cerrarFechasPago(){
+  document.getElementById('pagos-overlay').classList.remove('open');
+  fechasPagoAbierto = false;
+}
+
+// Mismo contenido, en texto plano, para el chat y para el asistente.
+function textoFechasPago(){
+  if(fechasPago === null) return null;
+  const lineas = PROGRAMAS_PAGO.map(p => {
+    const est = estadoPagoPrograma(p.clave);
+    if(est.tipo === 'proximas'){
+      const items = est.fechas.map(f => '   – ' + rangoPagoLegible(f.fecha_inicio, f.fecha_fin) + (f.nota ? ' (' + f.nota + ')' : '')).join('\n');
+      return '• ' + p.nombre + ':\n' + items;
+    }
+    if(est.tipo === 'sin_pagos'){
+      return '• ' + p.nombre + ': por el momento no hay pagos programados.' + (est.nota ? ' ' + est.nota : '');
+    }
+    return '• ' + p.nombre + ': por el momento no hay fechas de pago programadas.';
+  });
+  return lineas.join('\n\n');
+}
+
 document.addEventListener('keydown', (e) => {
   if(e.key !== 'Escape') return;
   if(infoProgramaAbierto) cerrarInfoPrograma();
   if(politicaDatosAbierta) cerrarPoliticaDatos();
+  if(fechasPagoAbierto) cerrarFechasPago();
 });
 
 function urlVideoEmbed(url){
@@ -1329,7 +1492,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-17-2';
+const APP_VERSION = '2026-10-21-1';
 let avisoVersionMostrado = false;
 
 /* ============================================================
@@ -1781,6 +1944,7 @@ function goMenu(){
   chatState = 'MENU';
   addMsg('¡Hola! Soy SARA, el asistente virtual de la Oficina de Programas Sociales de San Antonio. Puedes escribirme tu pregunta directamente, o elegir una opción.', 'bot');
   setChips([
+    {label:'📅 Fechas de pago', value:'FECHAS_PAGO'},
     {label:'Ver programas de atención', value:'TRAMITES'},
     {label:'Radicar una solicitud', value:'RADICAR'},
     {label:'Consultar el estado de un radicado', value:'CONSULTAR'},
@@ -1788,6 +1952,27 @@ function goMenu(){
   ]);
   showTextInput('Escribe tu pregunta…');
 }
+
+async function goFechasPago(){
+  chatState = 'FECHAS_PAGO';
+  hideTextInput();
+  setChips([]);
+  const burbuja = addTypingBubble();
+  await cargarFechasPagoPortal();
+  burbuja.remove();
+  const texto = textoFechasPago();
+  if(texto === null){
+    addMsg('No pude consultar las fechas de pago en este momento. Intenta de nuevo en unos minutos, o radica tu solicitud y un funcionario te responderá.', 'bot');
+  } else {
+    addMsg('📅 Fechas de pago\n\n' + texto + '\n\nLas fechas pueden cambiar según la programación nacional. Si tienes dudas sobre tu caso, radica tu solicitud y un funcionario te responderá.', 'bot');
+  }
+  setChips([
+    {label:'Radicar una solicitud', value:'RADICAR'},
+    {label:'Volver al menú', value:'MENU'},
+  ]);
+}
+
+const RE_PREGUNTA_PAGOS = /(\bpagos?\b|\bpagan\b|\bpagar[aá]n?\b|\bgiros?\b|\bconsignaci[oó]n|\bconsignan\b|cu[aá]ndo (me )?(pagan|consignan|llega|cae|giran))/i;
 
 function addTypingBubble(){
   const body = document.getElementById('chat-body');
@@ -1800,11 +1985,14 @@ function addTypingBubble(){
 }
 
 async function handleMenuFreeText(text){
+  // Preguntas sobre pagos: respondemos con las fechas reales programadas por coordinación.
+  if(RE_PREGUNTA_PAGOS.test(text)) return goFechasPago();
   const bubble = addTypingBubble();
   if(!sampleFn){
     bubble.textContent = 'En este momento no puedo responder preguntas abiertas, pero puedes usar las opciones de abajo.';
     bubble.classList.remove('typing');
     setChips([
+      {label:'📅 Fechas de pago', value:'FECHAS_PAGO'},
       {label:'Ver programas de atención', value:'TRAMITES'},
       {label:'Radicar una solicitud', value:'RADICAR'},
       {label:'Consultar el estado de un radicado', value:'CONSULTAR'},
@@ -1845,6 +2033,7 @@ async function handleMenuFreeText(text){
 
 function handleChip(value){
   if(chatState==='MENU'){
+    if(value==='FECHAS_PAGO') return goFechasPago();
     if(value==='TRAMITES') return goTramites();
     if(value==='RADICAR') return goRadicarOficina();
     if(value==='CONSULTAR') return goConsultar();
@@ -1852,6 +2041,10 @@ function handleChip(value){
   }
   if(chatState==='TRAMITES'){
     if(value==='VOLVER') return goMenu();
+  }
+  if(chatState==='FECHAS_PAGO'){
+    if(value==='MENU') return goMenu();
+    if(value==='RADICAR') return goRadicarOficina();
   }
   if(chatState==='RADICAR_OFICINA'){
     draft.oficina = value;
@@ -2208,6 +2401,7 @@ handleChip = function(value){
 ============================================================ */
 fetchBanners();
 initSample();
+cargarFechasPagoPortal();
 </script>
 </body>
 </html>
