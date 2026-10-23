@@ -415,6 +415,15 @@
       </div>
     </div>
 
+    <div class="field" style="margin-top:18px;border-top:1px solid var(--line);padding-top:16px;">
+      <label>Redes sociales (sección «Síguenos» de la página principal)</label>
+      <p style="font-size:11.5px;color:var(--ink-soft);margin:4px 0 8px;">Pega el enlace de cada red. Las que dejes vacías no se muestran. En WhatsApp puedes escribir solo el número con indicativo (ej. 573001234567) o el enlace de tu canal.</p>
+      <div id="rs-lista" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn-small" id="btn-rs-guardar" style="background:var(--green-700);color:#fff;">Guardar redes</button>
+      </div>
+    </div>
+
     <div class="modal-msg" id="ap-msg" role="status" aria-live="polite"></div>
     <div class="modal-actions">
       <button class="btn-cancel" id="btn-apariencia-cerrar">Cerrar</button>
@@ -755,7 +764,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-23-8';
+const APP_VERSION = '2026-10-23-9';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -1547,6 +1556,7 @@ document.getElementById('btn-ap-fondo-quitar').addEventListener('click', ()=>qui
 document.getElementById('dest-tipo').addEventListener('change', actualizarCamposDestacado);
 document.getElementById('btn-dest-guardar').addEventListener('click', guardarDestacado);
 document.getElementById('btn-dest-quitar').addEventListener('click', quitarDestacado);
+document.getElementById('btn-rs-guardar').addEventListener('click', guardarRedes);
 document.getElementById('btn-dest-imagen-agregar').addEventListener('click', agregarImagenDestacada);
 document.getElementById('btn-ap-logo-guardar-pos').addEventListener('click', guardarPosicionLogo);
 document.getElementById('btn-ap-fondo-guardar-pos').addEventListener('click', guardarPosicionFondo);
@@ -1636,8 +1646,52 @@ async function abrirModalApariencia(){
   document.getElementById('dest-titulo').value = destTipo !== 'imagen' ? (apConfigActual.destacado_titulo || '') : '';
   document.getElementById('dest-texto').value = destTipo !== 'imagen' ? (apConfigActual.destacado_texto || '') : '';
   actualizarCamposDestacado();
+  pintarRedes(apConfigActual.redes);
 
   document.getElementById('modal-apariencia-overlay').classList.add('open');
+}
+
+const REDES_LISTA = [
+  { red:'facebook',  nombre:'Facebook',  ejemplo:'https://www.facebook.com/tu-pagina' },
+  { red:'instagram', nombre:'Instagram', ejemplo:'https://www.instagram.com/tu_usuario' },
+  { red:'x',         nombre:'X (Twitter)', ejemplo:'https://x.com/tu_usuario' },
+  { red:'youtube',   nombre:'YouTube',   ejemplo:'https://www.youtube.com/@tu_canal' },
+  { red:'whatsapp',  nombre:'WhatsApp',  ejemplo:'573001234567 o enlace del canal' },
+  { red:'tiktok',    nombre:'TikTok',    ejemplo:'https://www.tiktok.com/@tu_usuario' }
+];
+
+function pintarRedes(redes){
+  const cont = document.getElementById('rs-lista');
+  const por = {};
+  (Array.isArray(redes) ? redes : []).forEach(r => { if(r && r.red) por[r.red] = r.url || ''; });
+  cont.innerHTML = REDES_LISTA.map(r => `
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label for="rs-${r.red}" style="width:92px;flex:none;font-size:12.5px;font-weight:600;">${r.nombre}</label>
+      <input type="text" id="rs-${r.red}" placeholder="${r.ejemplo}" autocomplete="off" style="flex:1;min-width:0;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:13px;">
+    </div>`).join('');
+  REDES_LISTA.forEach(r => { document.getElementById('rs-' + r.red).value = por[r.red] || ''; });
+}
+
+async function guardarRedes(){
+  const msg = document.getElementById('ap-msg');
+  const out = [];
+  for(const r of REDES_LISTA){
+    let v = document.getElementById('rs-' + r.red).value.trim();
+    if(!v) continue;
+    if(r.red === 'whatsapp' && /^\+?[\d\s-]{8,16}$/.test(v)) v = 'https://wa.me/' + v.replace(/\D/g, '');
+    if(!/^https:\/\/[^\s]+$/i.test(v)){
+      msg.textContent = r.nombre + ': el enlace debe empezar por https://';
+      return;
+    }
+    out.push({ red: r.red, url: v });
+  }
+  msg.textContent = 'Guardando…';
+  const { error } = await sb.from('configuracion_sitio').update({ redes: out, updated_at: new Date().toISOString() }).eq('id', 1);
+  if(error){
+    msg.textContent = /redes/.test(error.message || '') ? 'Falta ejecutar el SQL de redes sociales en Supabase (sql_redes_sociales.sql).' : ('Error al guardar: ' + error.message);
+    return;
+  }
+  msg.textContent = out.length ? 'Redes guardadas ✓' : 'Se quitaron todas las redes.';
 }
 
 function cerrarModalApariencia(){
