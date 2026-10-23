@@ -1581,7 +1581,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-23-5';
+const APP_VERSION = '2026-10-23-6';
 let avisoVersionMostrado = false;
 
 /* ============================================================
@@ -2456,7 +2456,8 @@ function guardarRadicadoLocal(codigo, programa){
   }catch(e){ /* sin almacenamiento: no pasa nada */ }
 }
 function chipsConsulta(){
-  const chips = leerRadicadosLocales().map(x => ({ label: 'Mi solicitud ' + x.c + (x.p ? ' · ' + x.p : ''), value: 'USAR:' + x.c }));
+  const chips = [];
+  if(leerRadicadosLocales().length) chips.push({ label: 'Ver mis solicitudes de este dispositivo', value: 'MIAS' });
   chips.push({ label: 'No recuerdo mi radicado', value: 'RECUPERAR' });
   chips.push({ label: 'Volver al menú', value: 'MENU' });
   return chips;
@@ -2467,6 +2468,31 @@ function goConsultar(){
   setChips(chipsConsulta());
   addMsg('Indícame el número de radicado que te dieron al registrar tu solicitud (por ejemplo 26-AM-0001). Después te pediré los últimos 4 números de tu documento, para proteger tus datos. Si no lo tienes a la mano, elige una opción de abajo.', 'bot');
   showTextInput('Ej: 26-AM-0001');
+}
+
+async function mostrarMisSolicitudes(d4){
+  addMsg('Buscando tus solicitudes…', 'system');
+  const hallados = [];
+  for(const x of leerRadicadosLocales()){
+    const r = await resolverRadicado(x.c, d4);
+    if(r === 'LIMITE'){
+      addMsg('Hiciste varios intentos que no coincidieron. Por seguridad, espera unos 10 minutos antes de intentarlo de nuevo.', 'bot');
+      chatState = 'CONSULTAR_RETRY';
+      setChips([{label:'Volver al menú', value:'MENU'}]);
+      return;
+    }
+    if(r) hallados.push(x);
+  }
+  if(!hallados.length){
+    addMsg('No encontré solicitudes con esos 4 números en este dispositivo. Puedes intentar de nuevo o buscarla con tu documento completo.', 'bot');
+    chatState = 'CONSULTAR_RETRY';
+    setChips([{label:'Intentar de nuevo', value:'CONSULTAR_RETRY'},{label:'No recuerdo mi radicado', value:'RECUPERAR'},{label:'Volver al menú', value:'MENU'}]);
+    return;
+  }
+  recuperarDoc = d4;
+  chatState = 'RECUPERAR_RESULTADO';
+  addMsg('Estas son tus solicitudes. Elige la que quieres consultar:', 'bot');
+  setChips(hallados.map(x => ({ label: 'Ver ' + x.c + (x.p ? ' · ' + x.p : ''), value: 'VER:' + x.c })).concat([{label:'Volver al menú', value:'MENU'}]));
 }
 
 /* ---------- "No recuerdo mi radicado" ---------- */
@@ -2607,6 +2633,12 @@ function handleTextStep(val){
     consultaCodigoPendiente = val;
     return pedirUltimos4();
   }
+  if(chatState==='MIAS_DOC4'){
+    const d4 = val.replace(/\D/g, '');
+    if(d4.length !== 4){ addMsg('Escribe exactamente 4 números.', 'bot'); return; }
+    hideTextInput();
+    return mostrarMisSolicitudes(d4);
+  }
   if(chatState==='RECUPERAR_DOC'){
     recuperarDoc = val.replace(/\D/g, '');
     if(recuperarDoc.length < 5){ addMsg('Escribe tu número de documento completo, solo números.', 'bot'); return; }
@@ -2675,10 +2707,13 @@ handleChip = function(value){
   if(chatState==='CONSULTAR_RADICADO' || chatState==='CONSULTAR_RETRY'){
     if(value==='MENU') return goMenu();
     if(value==='RECUPERAR') return pedirDocRecuperar();
-    if(typeof value === 'string' && value.startsWith('USAR:')){
-      hideTextInput();
-      consultaCodigoPendiente = value.slice(5);
-      return pedirUltimos4();
+    if(value==='MIAS'){
+      chatState = 'MIAS_DOC4';
+      setChips([]);
+      addMsg('Para proteger tus datos, escribe los últimos 4 números de tu documento de identidad y te muestro tus solicitudes.', 'bot');
+      showTextInput('Ej: 2340');
+      const inp = document.getElementById('chat-text'); inp.inputMode = 'numeric'; inp.maxLength = 4;
+      return;
     }
   }
   if(chatState==='RECUPERAR_RESULTADO'){
