@@ -846,6 +846,49 @@
 const SUPABASE_URL = 'https://yjkibftpjvhedbmscbwo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_elPZQ7xh3ManlHtDWJY1DA_1TgwZvgk';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Captcha Cloudflare Turnstile: pegue aquí la "clave del sitio" (Site key). Si está vacía, se radica sin captcha.
+const TURNSTILE_SITEKEY = '0x4AAAAAAFiltdvsJjI0htQ3';
+const VERSION_CONSENTIMIENTO = '2026-10';
+const PORTAL_URL = SUPABASE_URL + '/functions/v1/portal';
+async function llamarPortal(payload){
+  const r = await fetch(PORTAL_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY },
+    body: JSON.stringify(payload)
+  });
+  const d = await r.json().catch(() => ({}));
+  if(!r.ok) throw new Error(d.error || 'ERROR');
+  return d;
+}
+let turnstileCargado = null;
+function cargarTurnstile(){
+  if(window.turnstile) return Promise.resolve();
+  if(turnstileCargado) return turnstileCargado;
+  turnstileCargado = new Promise((ok, fail) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    sc.async = true; sc.onload = () => ok(); sc.onerror = () => fail(new Error('CAPTCHA_CARGA'));
+    document.head.appendChild(sc);
+  });
+  return turnstileCargado;
+}
+function esperarCaptcha(){
+  return cargarTurnstile().then(() => new Promise((ok, fail) => {
+    const cont = document.createElement('div');
+    cont.className = 'msg bot';
+    cont.innerHTML = '<div style="margin-bottom:8px;">Un último paso: confirma que eres una persona.</div>';
+    const caja = document.createElement('div');
+    cont.appendChild(caja);
+    document.getElementById('chat-body').appendChild(cont);
+    scrollChatToBottom();
+    window.turnstile.render(caja, {
+      sitekey: TURNSTILE_SITEKEY, theme: 'light', language: 'es',
+      callback: t => { setTimeout(() => cont.remove(), 600); ok(t); },
+      'error-callback': () => fail(new Error('CAPTCHA')),
+      'expired-callback': () => fail(new Error('CAPTCHA'))
+    });
+  }));
+}
 
 /* ============================================================
    Accesibilidad — control de tamaño de texto (Res. 1519/2020, WCAG 2.1 AA)
@@ -1538,7 +1581,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-23-1';
+const APP_VERSION = '2026-10-23-2';
 let avisoVersionMostrado = false;
 
 /* ============================================================
@@ -1601,15 +1644,28 @@ async function obtenerRadicadoLegible(id){
   }catch(e){ return null; }
 }
 
-async function createSolicitud(data){
+async function createSolicitud(data, tokenCaptcha){
   // El id se genera en el navegador (ver draft.id) así no necesitamos que el
   // servidor nos "devuelva" la fila (eso exigiría permiso de lectura, que un
   // ciudadano sin sesión no tiene).
   const id = data.id || crypto.randomUUID();
   const primerMensaje = { de:'ciudadano', texto: data.descripcion, ts: new Date().toISOString() };
   if(data.archivo) primerMensaje.archivo = data.archivo;
+  if(TURNSTILE_SITEKEY){
+    try{
+      const r = await llamarPortal({ action:'radicar', token: tokenCaptcha, datos: {
+        id, nombre: data.nombre, documento: data.documento, edad: data.edad ?? null, contacto: data.contacto,
+        programa: data.oficina, tipo: data.tipo, descripcion: data.descripcion, prioritaria: !!data.prioritaria,
+        caracterizacion: (data.caracterizacion && data.caracterizacion.length) ? data.caracterizacion : null,
+        archivo: data.archivo || null, consentimiento: true, consentimiento_version: VERSION_CONSENTIMIENTO
+      }});
+      return r.id || id;
+    }catch(e){ console.error(e); throw e; }
+  }
   const { error } = await sb.from('solicitudes').insert({
     id,
+    consentimiento_en: new Date().toISOString(),
+    consentimiento_version: VERSION_CONSENTIMIENTO,
     nombre: data.nombre,
     documento: data.documento,
     edad: data.edad ?? null,
@@ -1753,6 +1809,7 @@ let chatState = 'MENU';
 let draft = {}; // in-progress solicitud fields
 let lastRadicado = null;
 let lastConsultaId = null;
+let lastConsultaDoc4 = '';
 let lastConsultaRadicadoLegible = null;
 let encuestaDraft = null;
 let sampleFn = null;
@@ -1916,12 +1973,21 @@ function addMsg(text, who, archivo, radicadoDestacado){
   if(archivo && archivo.url && String(archivo.url).startsWith(SUPABASE_URL + '/storage/v1/object/public/')){
     const a = document.createElement('a');
     a.className = 'attachment';
-    a.href = archivo.url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
+    a.href = '#';
     a.textContent = '📄 ' + (archivo.nombre || 'Descargar documento');
-    a.setAttribute('download', archivo.nombre || '');
-    a.setAttribute('aria-label', 'Descargar documento adjunto: ' + (archivo.nombre || ''));
+    a.setAttribute('aria-label', 'Abrir documento adjunto: ' + (archivo.nombre || ''));
+    const urlArchivo = archivo.url;
+    a.addEventListener('click', async ev => {
+      ev.preventDefault();
+      const ventana = window.open('', '_blank');
+      try{
+        const r = await llamarPortal({ action:'firmar', id: lastConsultaId, doc4: lastConsultaDoc4, url: urlArchivo });
+        if(ventana){ ventana.opener = null; ventana.location = r.url; } else { window.location = r.url; }
+      }catch(e){
+        if(ventana) ventana.close();
+        addMsg('No pudimos abrir el documento. Inténtalo de nuevo en un momento.', 'bot');
+      }
+    });
     div.appendChild(a);
   }
   body.appendChild(div);
@@ -2133,7 +2199,16 @@ function handleChip(value){
   }
   if(chatState==='RADICAR_TIPO'){
     draft.tipo = value;
-    return goRadicarNombre();
+    return goRadicarConsentimiento();
+  }
+  if(chatState==='RADICAR_CONSENTIMIENTO'){
+    if(value==='CONSENT_SI'){ draft.consentimiento = new Date().toISOString(); return goRadicarNombre(); }
+    if(value==='CONSENT_LEER'){ abrirPoliticaDatos(); return; }
+    if(value==='CONSENT_NO'){
+      addMsg('Entendido. Sin tu autorización no podemos recibir tus datos por este medio. Puedes acercarte a la Oficina de Programas Sociales en el horario de atención.', 'bot');
+      draft = {};
+      return goMenu();
+    }
   }
   if(chatState==='RADICAR_ADJUNTO'){
     if(value==='ADJUNTAR'){ fileUploadContext = 'RADICAR'; return chatFileInput.click(); }
@@ -2187,6 +2262,13 @@ function goRadicarTipo(){
   chatState = 'RADICAR_TIPO';
   addMsg(draft.oficina === 'PQR' ? '¿Qué deseas radicar?' : '¿Qué tipo de solicitud es?', 'bot');
   setChips(tiposPara(draft.oficina).map(t=>({label:t, value:t})));
+}
+
+function goRadicarConsentimiento(){
+  chatState = 'RADICAR_CONSENTIMIENTO';
+  hideTextInput();
+  addMsg('Antes de pedirte tus datos: la Alcaldía de San Antonio los tratará solo para atender y dar seguimiento a tu solicitud, según la Ley 1581 de 2012. Puedes conocer, actualizar o pedir que borremos tus datos cuando quieras. ¿Autorizas el tratamiento de tus datos personales?', 'bot');
+  setChips([{label:'Sí, autorizo', value:'CONSENT_SI'},{label:'Leer la política', value:'CONSENT_LEER'},{label:'No autorizo', value:'CONSENT_NO'}]);
 }
 
 function goRadicarNombre(){
@@ -2297,8 +2379,19 @@ function goConfirmar(){
 
 async function enviarSolicitud(){
   setChips([]);
+  let tokenCaptcha = null;
+  if(TURNSTILE_SITEKEY){
+    try{ tokenCaptcha = await esperarCaptcha(); }
+    catch(e){
+      addMsg('No pudimos verificar que eres una persona. Revisa tu conexión e inténtalo de nuevo.', 'bot');
+      setChips([{label:'Intentar de nuevo', value:'CONFIRMAR_SI'},{label:'Cancelar', value:'CONFIRMAR_NO'}]);
+      return;
+    }
+  }
   addMsg('Radicando tu solicitud…', 'system');
-  const id = await createSolicitud({
+  let id;
+  try{
+  id = await createSolicitud({
     id: draft.id,
     nombre: draft.nombre,
     documento: draft.documento,
@@ -2310,7 +2403,14 @@ async function enviarSolicitud(){
     prioritaria: !!draft.directoAFuncionario,
     archivo: draft.archivo,
     caracterizacion: draft.caracterizacion,
-  });
+  }, tokenCaptcha);
+  }catch(e){
+    const m = String(e && e.message || '');
+    addMsg(m.includes('DEMASIADAS') ? 'Se enviaron muchas solicitudes desde esta conexión. Espera un rato e inténtalo de nuevo, o acércate a la oficina.' : 'No pudimos radicar tu solicitud. Inténtalo de nuevo en unos minutos.', 'bot');
+    setChips([{label:'Intentar de nuevo', value:'CONFIRMAR_SI'},{label:'Cancelar', value:'CONFIRMAR_NO'}]);
+    chatState = 'CONFIRMAR';
+    return;
+  }
   lastRadicado = id;
   chatState = 'POST_ENVIO';
   const radicadoLegible = (await obtenerRadicadoLegible(id)) || formatoRadicado(id);
@@ -2374,6 +2474,7 @@ async function mostrarEstado(textoIngresado, ultimos4){
   }
   const radicadoLegible = (await obtenerRadicadoLegible(radicado)) || formatoRadicado(radicado);
   lastConsultaId = radicado;
+  lastConsultaDoc4 = String(ultimos4 || '').replace(/\D/g, '');
   lastConsultaRadicadoLegible = radicadoLegible;
   const estadoLabel = {pendiente:'Pendiente', en_proceso:'En proceso', resuelto:'Resuelto', respondida:'Respondida'};
   let texto = `Tu solicitud (${s.programa} · ${s.tipo}) está "${estadoLabel[s.estado] || s.estado}".`;

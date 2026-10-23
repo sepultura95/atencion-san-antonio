@@ -755,7 +755,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-23-1';
+const APP_VERSION = '2026-10-23-2';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -1208,6 +1208,24 @@ function armarRespuestaRapida(p, s){
 /* Enlaces: solo se abren archivos de nuestro propio almacenamiento */
 const PREFIJO_STORAGE = SUPABASE_URL + '/storage/v1/object/public/';
 function urlSegura(u){ return (typeof u === 'string' && u.startsWith(PREFIJO_STORAGE)) ? u : null; }
+// Los adjuntos de ciudadanos están en un bucket privado: se abren con un enlace temporal (2 minutos)
+async function abrirAdjunto(url){
+  if(!urlSegura(url)) return;
+  const ruta = url.slice(PREFIJO_STORAGE.length);
+  const bucket = ruta.split('/')[0];
+  const objeto = ruta.slice(bucket.length + 1);
+  const ventana = window.open('', '_blank');
+  let destino = url;
+  try{
+    const { data, error } = await sb.storage.from(bucket).createSignedUrl(objeto, 120);
+    if(!error && data && data.signedUrl) destino = data.signedUrl;
+  }catch(e){ /* si falla, se intenta el enlace original */ }
+  if(ventana){ ventana.opener = null; ventana.location = destino; } else { window.location = destino; }
+}
+document.addEventListener('click', ev => {
+  const a = ev.target.closest && ev.target.closest('a[data-adjunto]');
+  if(a){ ev.preventDefault(); abrirAdjunto(a.getAttribute('data-adjunto')); }
+});
 
 /* Nombre de archivo apto para el almacenamiento (sin tildes, espacios ni símbolos) */
 function nombreArchivoSeguro(nombre){
@@ -1325,7 +1343,7 @@ function renderDetail(){
         <div class="who">${m.de === 'ciudadano' ? 'Ciudadano' : 'Funcionario'} · ${m.ts ? new Date(m.ts).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}) : ''}</div>
         <div>${escapeHtml(m.texto || '')}</div>
         ${m.archivo && m.archivo.url ? (urlSegura(m.archivo.url)
-            ? `<a class="attachment" href="${escapeHtml(m.archivo.url)}" target="_blank" rel="noopener noreferrer">📄 ${escapeHtml(m.archivo.nombre || 'Documento')}</a>`
+            ? `<a class="attachment" href="#" data-adjunto="${escapeHtml(m.archivo.url)}">📄 ${escapeHtml(m.archivo.nombre || 'Documento')}</a>`
             : `<span class="attachment" title="Este enlace no pertenece al almacenamiento de la Alcaldía y no se abre">⚠️ Adjunto con enlace no válido (no se abre)</span>`) : ''}
       </div>`).join('') || '<div class="msg">Sin mensajes.</div>'}
     </div>
