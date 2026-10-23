@@ -1581,7 +1581,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-23-6';
+const APP_VERSION = '2026-10-23-7';
 let avisoVersionMostrado = false;
 
 /* ============================================================
@@ -2511,6 +2511,7 @@ function pedirContactoRecuperar(){
   const inp = document.getElementById('chat-text'); inp.inputMode = 'text'; inp.maxLength = 120;
 }
 async function buscarRadicadosPerdidos(contacto){
+  hideTextInput();
   addMsg('Buscando tus solicitudes…', 'system');
   const { data, error } = await sb.rpc('recuperar_radicados', { p_documento: recuperarDoc, p_contacto: contacto });
   if(error && String(error.message || '').includes('DEMASIADOS_INTENTOS')){
@@ -2530,6 +2531,7 @@ async function buscarRadicadosPerdidos(contacto){
     data.map(r => r.radicado_legible + ' · ' + r.programa + ' · ' + (estadoLabel[r.estado] || r.estado)).join('\n'), 'bot');
   data.forEach(r => guardarRadicadoLocal(r.radicado_legible, r.programa));
   chatState = 'RECUPERAR_RESULTADO';
+  hideTextInput();
   setChips(data.slice(0, 5).map(r => ({ label: 'Ver ' + r.radicado_legible, value: 'VER:' + r.radicado_legible }))
     .concat([{label:'Volver al menú', value:'MENU'}]));
 }
@@ -2655,6 +2657,10 @@ function handleTextStep(val){
     return mostrarEstado(cod, val);
   }
   if(chatState==='ENCUESTA_COMENTARIO'){ return finalizarEncuesta(val); }
+  if(chatState==='RECUPERAR_RESULTADO' || chatState==='CONSULTAR_RETRY'){
+    hideTextInput();
+    addMsg('Elige una de las opciones de abajo para continuar.', 'bot');
+  }
 }
 
 /* ---------- Manejo del input de archivo (radicar y enviar adjunto adicional) ---------- */
