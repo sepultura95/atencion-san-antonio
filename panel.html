@@ -755,7 +755,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-23-2';
+const APP_VERSION = '2026-10-23-3';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -1258,8 +1258,16 @@ function mostrarToast(texto){
   toastTimer = setTimeout(()=> el.classList.remove('show'), 5000);
 }
 
+// Si la conexión o el servidor no responden, no dejar el botón "Guardando..." para siempre
+function conTiempo(promesa, ms){
+  return Promise.race([
+    Promise.resolve(promesa),
+    new Promise(res => setTimeout(() => res({ error: { message: 'TIEMPO_AGOTADO' } }), ms || 25000))
+  ]);
+}
 function mensajeError(e){
   const m = String((e && (e.message || e.details)) || '');
+  if(m.includes('TIEMPO_AGOTADO')) return 'El servidor tardó demasiado en responder. Revisa tu conexión y mira en la lista si la respuesta quedó guardada antes de volver a enviarla.';
   if(m.includes('YA_RESUELTA')) return 'Esta solicitud ya fue resuelta (probablemente por otro funcionario). Se actualizó la lista.';
   if(m.includes('SIN_CONTENIDO')) return 'Escribe una respuesta o adjunta un documento.';
   if(m.includes('ARCHIVO_INVALIDO')) return 'El documento adjunto no es válido.';
@@ -1381,7 +1389,7 @@ function renderDetail(){
       return;
     }
     btnReabrir.disabled = true;
-    const { error } = await sb.rpc('reabrir_solicitud', { p_id: s.id });
+    const { error } = await conTiempo(sb.rpc('reabrir_solicitud', { p_id: s.id }), 25000);
     if(error){
       console.error(error);
       btnReabrir.disabled = false;
@@ -1475,13 +1483,13 @@ async function guardarRespuesta(s){
 
   // El servidor agrega la respuesta al historial, pone el nombre del funcionario desde su sesión
   // y rechaza la respuesta si la solicitud ya fue resuelta (por este u otro funcionario).
-  const { error } = await sb.rpc('responder_solicitud', {
+  const { error } = await conTiempo(sb.rpc('responder_solicitud', {
     p_id: s.id,
     p_texto: texto || null,
     p_archivo_url: archivo ? archivo.url : null,
     p_archivo_nombre: archivo ? archivo.nombre : null,
     p_estado: nuevoEstado
-  });
+  }), 25000);
   btn.disabled = false; btn.textContent = btnTextoNormal;
   if(error){
     console.error(error);
