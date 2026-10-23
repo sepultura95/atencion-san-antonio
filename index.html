@@ -335,20 +335,6 @@
     background:var(--ochre-500);border:2px solid var(--paper);
   }
 
-  /* ---------- Botón "Fechas de pago" (al lado del chat) ---------- */
-  .pagos-launcher{
-    position:fixed;right:86px;
-    bottom:calc(25px + var(--safe-bottom));
-    height:44px;padding:0 16px;border-radius:999px;
-    background:var(--white);color:var(--green-700);
-    border:2px solid var(--green-700);
-    box-shadow:0 6px 18px rgba(22,58,47,0.22);
-    cursor:pointer;z-index:49;
-    display:flex;align-items:center;gap:7px;
-    font:inherit;font-size:13.5px;font-weight:700;
-  }
-  .pagos-launcher:hover{background:var(--green-700);color:var(--white);}
-
   /* ---------- Ventana de fechas de pago ---------- */
   .pago-card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:0 0 12px;background:var(--white);}
   .pago-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
@@ -594,7 +580,6 @@
     .sara{padding:22px 20px;}
 
     .chat-launcher{right:14px;width:54px;height:54px;font-size:22px;}
-    .pagos-launcher{right:78px;bottom:calc(24px + var(--safe-bottom));height:42px;padding:0 13px;font-size:13px;}
     .chat-panel{
       right:0;left:0;bottom:0;top:0;
       width:100vw;height:100%;max-height:none;
@@ -783,7 +768,6 @@
 </div>
 
 <!-- ===================== FECHAS DE PAGO ===================== -->
-<button class="pagos-launcher" id="pagos-launcher" onclick="abrirFechasPago()" aria-haspopup="dialog">📅 Fechas de pago</button>
 <div class="info-overlay" id="pagos-overlay" onclick="if(event.target===this) cerrarFechasPago()">
   <div class="info-box" role="dialog" aria-modal="true" aria-labelledby="pagos-titulo">
     <div class="info-box-head">
@@ -1607,7 +1591,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-23-10';
+const APP_VERSION = '2026-10-23-11';
 let avisoVersionMostrado = false;
 
 /* ============================================================
