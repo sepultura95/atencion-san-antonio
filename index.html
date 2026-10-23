@@ -1581,7 +1581,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-23-4';
+const APP_VERSION = '2026-10-23-5';
 let avisoVersionMostrado = false;
 
 /* ============================================================
@@ -2494,13 +2494,13 @@ async function buscarRadicadosPerdidos(contacto){
     return;
   }
   if(error || !Array.isArray(data) || !data.length){
-    addMsg('No encontré solicitudes con esos datos. Revisa que el documento y el contacto sean los mismos que escribiste al radicar. Si sigues sin encontrarla, acércate a la oficina con tu documento y te ayudamos.', 'bot');
+    addMsg('No encontré solicitudes recientes con esos datos (solo busco las abiertas o resueltas en los últimos 7 días). Revisa que el documento y el contacto sean los mismos que escribiste al radicar. Si sigues sin encontrarla, acércate a la oficina con tu documento y te ayudamos.', 'bot');
     chatState = 'CONSULTAR_RETRY';
     setChips([{label:'Intentar de nuevo', value:'RECUPERAR'},{label:'Volver al menú', value:'MENU'}]);
     return;
   }
   const estadoLabel = {pendiente:'Pendiente', en_proceso:'En proceso', resuelto:'Resuelto', respondida:'Respondida'};
-  addMsg('Encontré ' + (data.length === 1 ? 'esta solicitud' : 'estas solicitudes') + '. Anota el número o tómale captura:\n\n' +
+  addMsg('Encontré ' + (data.length === 1 ? 'esta solicitud reciente' : 'estas solicitudes recientes') + ' (abiertas o resueltas esta semana). Anota el número o tómale captura:\n\n' +
     data.map(r => r.radicado_legible + ' · ' + r.programa + ' · ' + (estadoLabel[r.estado] || r.estado)).join('\n'), 'bot');
   data.forEach(r => guardarRadicadoLocal(r.radicado_legible, r.programa));
   chatState = 'RECUPERAR_RESULTADO';
