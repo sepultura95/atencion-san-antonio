@@ -1581,7 +1581,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-23-3';
+const APP_VERSION = '2026-10-23-4';
 let avisoVersionMostrado = false;
 
 /* ============================================================
@@ -1810,6 +1810,7 @@ let draft = {}; // in-progress solicitud fields
 let lastRadicado = null;
 let lastConsultaId = null;
 let lastConsultaDoc4 = '';
+let lastRadicadoLegible = '';
 let lastConsultaRadicadoLegible = null;
 let encuestaDraft = null;
 let sampleFn = null;
@@ -2414,6 +2415,8 @@ async function enviarSolicitud(){
   lastRadicado = id;
   chatState = 'POST_ENVIO';
   const radicadoLegible = (await obtenerRadicadoLegible(id)) || formatoRadicado(id);
+  lastRadicadoLegible = radicadoLegible;
+  guardarRadicadoLocal(radicadoLegible, draft.oficina);
   addMsg(`Guárdalo para consultar el estado más adelante. Un funcionario del programa de ${draft.oficina} la revisará y te responderá por este medio o por ${draft.contacto}.`, 'bot', null, radicadoLegible);
   const estadoHorarioActual = obtenerEstadoHorario();
   if(!estadoHorarioActual.abierto || avisoNoLaboralHoy){
@@ -2425,9 +2428,9 @@ async function enviarSolicitud(){
   }
   if(draft.directoAFuncionario){
     addMsg('La marqué como prioritaria para que un funcionario la atienda cuanto antes.', 'bot');
-    setChips([{label:'Volver al menú', value:'MENU'}]);
+    setChips([{label:'📋 Copiar radicado', value:'COPIAR'},{label:'Volver al menú', value:'MENU'}]);
   } else {
-    setChips([{label:'Marcar como urgente', value:'PRIORIZAR'},{label:'Volver al menú', value:'MENU'}]);
+    setChips([{label:'📋 Copiar radicado', value:'COPIAR'},{label:'Marcar como urgente', value:'PRIORIZAR'},{label:'Volver al menú', value:'MENU'}]);
   }
 }
 
@@ -2439,11 +2442,70 @@ async function priorizarUltima(){
   setChips([{label:'Volver al menú', value:'MENU'}]);
 }
 
+/* Radicados recordados en este navegador (solo el código; los 4 dígitos se piden siempre) */
+function leerRadicadosLocales(){
+  try{ const a = JSON.parse(localStorage.getItem('sa_radicados') || '[]'); return Array.isArray(a) ? a.slice(0, 3) : []; }
+  catch(e){ return []; }
+}
+function guardarRadicadoLocal(codigo, programa){
+  if(!codigo) return;
+  try{
+    const a = leerRadicadosLocales().filter(x => x.c !== codigo);
+    a.unshift({ c: codigo, p: programa || '' });
+    localStorage.setItem('sa_radicados', JSON.stringify(a.slice(0, 3)));
+  }catch(e){ /* sin almacenamiento: no pasa nada */ }
+}
+function chipsConsulta(){
+  const chips = leerRadicadosLocales().map(x => ({ label: 'Mi solicitud ' + x.c + (x.p ? ' · ' + x.p : ''), value: 'USAR:' + x.c }));
+  chips.push({ label: 'No recuerdo mi radicado', value: 'RECUPERAR' });
+  chips.push({ label: 'Volver al menú', value: 'MENU' });
+  return chips;
+}
+
 function goConsultar(){
   chatState = 'CONSULTAR_RADICADO';
-  setChips([]);
-  addMsg('Indícame el número de radicado que te dieron al registrar tu solicitud (por ejemplo 26-AM-0001). Después te pediré los últimos 4 números de tu documento, para proteger tus datos.', 'bot');
+  setChips(chipsConsulta());
+  addMsg('Indícame el número de radicado que te dieron al registrar tu solicitud (por ejemplo 26-AM-0001). Después te pediré los últimos 4 números de tu documento, para proteger tus datos. Si no lo tienes a la mano, elige una opción de abajo.', 'bot');
   showTextInput('Ej: 26-AM-0001');
+}
+
+/* ---------- "No recuerdo mi radicado" ---------- */
+let recuperarDoc = '';
+function pedirDocRecuperar(){
+  chatState = 'RECUPERAR_DOC';
+  setChips([]);
+  addMsg('Te ayudo a encontrarlo. Escribe tu número de documento completo, sin puntos.', 'bot');
+  showTextInput('Número de documento');
+  const inp = document.getElementById('chat-text'); inp.inputMode = 'numeric'; inp.maxLength = 15;
+}
+function pedirContactoRecuperar(){
+  chatState = 'RECUPERAR_CONTACTO';
+  addMsg('Ahora escribe el teléfono o el correo que dejaste al radicar tu solicitud.', 'bot');
+  showTextInput('Teléfono o correo');
+  const inp = document.getElementById('chat-text'); inp.inputMode = 'text'; inp.maxLength = 120;
+}
+async function buscarRadicadosPerdidos(contacto){
+  addMsg('Buscando tus solicitudes…', 'system');
+  const { data, error } = await sb.rpc('recuperar_radicados', { p_documento: recuperarDoc, p_contacto: contacto });
+  if(error && String(error.message || '').includes('DEMASIADOS_INTENTOS')){
+    addMsg('Hiciste varios intentos que no coincidieron. Por seguridad, espera unos 10 minutos antes de intentarlo de nuevo, o acércate a la oficina.', 'bot');
+    chatState = 'CONSULTAR_RETRY';
+    setChips([{label:'Volver al menú', value:'MENU'}]);
+    return;
+  }
+  if(error || !Array.isArray(data) || !data.length){
+    addMsg('No encontré solicitudes con esos datos. Revisa que el documento y el contacto sean los mismos que escribiste al radicar. Si sigues sin encontrarla, acércate a la oficina con tu documento y te ayudamos.', 'bot');
+    chatState = 'CONSULTAR_RETRY';
+    setChips([{label:'Intentar de nuevo', value:'RECUPERAR'},{label:'Volver al menú', value:'MENU'}]);
+    return;
+  }
+  const estadoLabel = {pendiente:'Pendiente', en_proceso:'En proceso', resuelto:'Resuelto', respondida:'Respondida'};
+  addMsg('Encontré ' + (data.length === 1 ? 'esta solicitud' : 'estas solicitudes') + '. Anota el número o tómale captura:\n\n' +
+    data.map(r => r.radicado_legible + ' · ' + r.programa + ' · ' + (estadoLabel[r.estado] || r.estado)).join('\n'), 'bot');
+  data.forEach(r => guardarRadicadoLocal(r.radicado_legible, r.programa));
+  chatState = 'RECUPERAR_RESULTADO';
+  setChips(data.slice(0, 5).map(r => ({ label: 'Ver ' + r.radicado_legible, value: 'VER:' + r.radicado_legible }))
+    .concat([{label:'Volver al menú', value:'MENU'}]));
 }
 
 let consultaCodigoPendiente = '';
@@ -2545,6 +2607,16 @@ function handleTextStep(val){
     consultaCodigoPendiente = val;
     return pedirUltimos4();
   }
+  if(chatState==='RECUPERAR_DOC'){
+    recuperarDoc = val.replace(/\D/g, '');
+    if(recuperarDoc.length < 5){ addMsg('Escribe tu número de documento completo, solo números.', 'bot'); return; }
+    return pedirContactoRecuperar();
+  }
+  if(chatState==='RECUPERAR_CONTACTO'){
+    hideTextInput();
+    const doc = recuperarDoc;
+    return buscarRadicadosPerdidos(val.trim());
+  }
   if(chatState==='CONSULTAR_DOC4'){
     hideTextInput();
     const cod = consultaCodigoPendiente; consultaCodigoPendiente = '';
@@ -2599,6 +2671,28 @@ handleChip = function(value){
   if(chatState==='CONSULTAR_RETRY'){
     if(value==='MENU') return goMenu();
     if(value==='CONSULTAR_RETRY') return goConsultar();
+  }
+  if(chatState==='CONSULTAR_RADICADO' || chatState==='CONSULTAR_RETRY'){
+    if(value==='MENU') return goMenu();
+    if(value==='RECUPERAR') return pedirDocRecuperar();
+    if(typeof value === 'string' && value.startsWith('USAR:')){
+      hideTextInput();
+      consultaCodigoPendiente = value.slice(5);
+      return pedirUltimos4();
+    }
+  }
+  if(chatState==='RECUPERAR_RESULTADO'){
+    if(value==='MENU') return goMenu();
+    if(typeof value === 'string' && value.startsWith('VER:')){
+      return mostrarEstado(value.slice(4), recuperarDoc.slice(-4));
+    }
+  }
+  if(chatState==='POST_ENVIO' && value==='COPIAR'){
+    const cod = lastRadicadoLegible || '';
+    const listo = () => addMsg('Copiado: ' + cod + '. También puedes tomarle captura a la pantalla.', 'system');
+    try{ navigator.clipboard.writeText(cod).then(listo, () => addMsg('Anota tu radicado: ' + cod, 'system')); }
+    catch(e){ addMsg('Anota tu radicado: ' + cod, 'system'); }
+    return;
   }
   if(chatState==='POST_CONSULTA' && value==='MENU') return goMenu();
   return _origHandleChip(value);
