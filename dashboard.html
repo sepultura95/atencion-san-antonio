@@ -6,27 +6,33 @@
 <title>Indicadores — Programas Sociales</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg-page:#0a0e14;
-    --bg-card:#121923;
-    --bg-card-2:#0d131b;
-    --bg-hover:#182230;
-    --border:rgba(255,255,255,.08);
-    --border-strong:rgba(255,255,255,.16);
-    --text-primary:#f3f6fa;
-    --text-secondary:#a9b7c6;
-    --text-muted:#6c7a89;
-    --accent:#5b9bdb;
-    --accent-dim:#2c5d8f;
-    --accent-glow:rgba(91,155,219,.35);
-    --verde:#0ca30c;
-    --amarillo:#fab219;
-    --rojo:#d03b3b;
-    --gris:#5b6672;
-    --track:rgba(255,255,255,.08);
-    --radius:10px;
+    --green-900:#163a2f;
+    --green-700:#1f4b3f;
+    --green-600:#2b5f4f;
+    --ochre-600:#b5812a;
+    --ochre-500:#c98a2b;
+    --ochre-100:#f3e4c6;
+    --on-ochre:#0f2a21;
+    --bg-page:#f7f5ee;
+    --bg-card:#ffffff;
+    --bg-card-2:#efece2;
+    --bg-hover:#e8e3d4;
+    --border:#ddd6c6;
+    --border-strong:#c9c1ad;
+    --text-primary:#272420;
+    --text-secondary:#4a463e;
+    --text-muted:#5f5a50;
+    --accent:#1f4b3f;
+    --accent-dim:#163a2f;
+    --verde:#2f7d3a;
+    --amarillo:#c98a2b;
+    --rojo:#b23b2b;
+    --gris:#8a8577;
+    --track:#e7e2d3;
+    --radius:4px;
   }
   *{box-sizing:border-box;}
   html,body{height:100%;}
@@ -34,44 +40,40 @@
     margin:0;background:var(--bg-page);color:var(--text-primary);
     font-family:'IBM Plex Sans', sans-serif;-webkit-font-smoothing:antialiased;
     padding-bottom:60px;
-    background-image:
-      radial-gradient(900px 480px at 12% -8%, rgba(91,155,219,.14), transparent 60%),
-      radial-gradient(700px 420px at 100% 0%, rgba(23,196,120,.08), transparent 55%);
-    background-attachment:fixed;
   }
-  h1,h2,h3{font-family:inherit;font-weight:700;letter-spacing:-0.01em;margin:0;color:var(--text-primary);}
+  h1,h2,h3{font-family:'Fraunces', serif;font-weight:600;letter-spacing:-0.01em;margin:0;color:var(--green-900);}
   button,select{font-family:inherit;cursor:pointer;}
   a{color:var(--accent);}
-  .mono{font-family:'IBM Plex Mono',monospace;}
-  a:focus-visible, button:focus-visible, select:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .mono{font-variant-numeric:tabular-nums;}
+  a:focus-visible, button:focus-visible, select:focus-visible{outline:3px solid var(--ochre-500);outline-offset:2px;}
 
   .topbar{
-    background:linear-gradient(180deg,#0d1520,#0a0e14);
-    padding:16px 22px;border-bottom:1px solid var(--border);position:relative;
-    box-shadow:0 1px 0 var(--accent-dim);
+    background:var(--green-700);color:#fff;
+    padding:14px 20px;border-bottom:3px solid var(--ochre-500);position:relative;overflow:hidden;
   }
-  .topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;max-width:1180px;margin:0 auto;}
+  .topbar-bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;transform-origin:center;}
+  .topbar-bg-overlay{position:absolute;inset:0;z-index:0;pointer-events:none;}
+  .topbar-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;max-width:1180px;margin:0 auto;}
   .topbar .left{display:flex;align-items:center;gap:12px;}
   .seal{
-    width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent-dim));
-    display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:14px;overflow:hidden;flex:none;
-    box-shadow:0 0 0 1px var(--border-strong), 0 6px 18px rgba(91,155,219,.25);
+    width:36px;height:36px;border-radius:50%;background:var(--ochre-500);
+    display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;color:var(--on-ochre);font-size:15px;overflow:hidden;flex:none;
   }
-  .seal img{width:100%;height:100%;object-fit:cover;border-radius:9px;}
-  .topbar h1{font-size:18px;}
-  .topbar .sub{font-size:12px;color:var(--text-muted);margin-top:2px;}
+  .seal img{width:100%;height:100%;object-fit:cover;transform-origin:center;}
+  .topbar h1{font-size:17px;color:#fff;}
+  .topbar .sub{font-size:12px;color:var(--ochre-100);margin-top:2px;}
   .topbar .right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .btn-ghost{
-    background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);
-    padding:8px 14px;border-radius:7px;font-size:13px;text-decoration:none;display:inline-block;
+    background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff;
+    padding:8px 14px;border-radius:4px;font-size:13px;text-decoration:none;display:inline-flex;align-items:center;min-height:36px;white-space:nowrap;
   }
-  .btn-ghost:hover{background:var(--bg-hover);border-color:var(--border-strong);}
+  .btn-ghost:hover{background:rgba(255,255,255,.12);}
   .text-ctrl{display:flex;gap:4px;flex:none;}
   .text-ctrl button{
-    background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);
-    width:30px;height:30px;border-radius:7px;font-weight:700;line-height:1;
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);color:#fff;
+    width:36px;height:36px;border-radius:6px;font-weight:700;line-height:1;
   }
-  .text-ctrl button:hover{background:var(--bg-hover);}
+  .text-ctrl button:hover{background:rgba(255,255,255,.25);}
 
   .wrap{max-width:1180px;margin:0 auto;padding:22px 18px;}
 
@@ -82,10 +84,10 @@
   .login-card h2{font-size:21px;margin-bottom:8px;}
   .login-card p{color:var(--text-secondary);font-size:14px;margin:0 0 20px;}
   .btn-primary{
-    background:linear-gradient(135deg,var(--accent),var(--accent-dim));color:#fff;border:none;padding:11px 18px;border-radius:7px;
+    background:var(--green-700);color:#fff;border:none;padding:11px 18px;border-radius:4px;
     font-size:14px;font-weight:600;text-decoration:none;display:inline-block;
   }
-  .btn-primary:hover{filter:brightness(1.1);}
+  .btn-primary:hover{background:var(--green-900);}
 
   .dash-toolbar{
     display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
@@ -93,12 +95,12 @@
     padding:14px 16px;margin-bottom:18px;
   }
   .dash-toolbar label{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;}
-  #sel-ambito{padding:9px 10px;border:1px solid var(--border);border-radius:7px;font-size:14px;background:var(--bg-card-2);color:var(--text-primary);min-width:270px;}
-  .btn-actualizar{background:var(--bg-card-2);border:1px solid var(--border);color:var(--text-primary);padding:9px 14px;border-radius:7px;font-size:13px;font-weight:600;}
+  #sel-ambito{padding:9px 10px;border:1px solid var(--border);border-radius:4px;font-size:14px;background:var(--bg-card-2);color:var(--text-primary);min-width:min(270px,100%);}
+  .btn-actualizar{background:var(--bg-card-2);border:1px solid var(--border);color:var(--text-primary);padding:9px 14px;border-radius:4px;min-height:40px;font-size:13px;font-weight:600;}
   .btn-actualizar:hover{background:var(--bg-hover);}
 
   .seccion{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px;}
-  .seccion h2{font-size:15px;}
+  .seccion h2{font-size:17px;}
   .seccion .seccion-sub{font-size:12.5px;color:var(--text-muted);margin:3px 0 16px;}
   .grid-2{display:grid;grid-template-columns:1.1fr 1.4fr;gap:18px;}
   @media (max-width:900px){.grid-2{grid-template-columns:1fr;}}
@@ -120,17 +122,17 @@
   .kpi-dial svg{display:block;}
   .kpi-dial .dial-val{
     position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px;color:var(--text-primary);text-align:center;line-height:1.1;
+    font-variant-numeric:tabular-nums;font-weight:600;font-size:15px;color:var(--text-primary);text-align:center;line-height:1.1;
   }
   .kpi-body{flex:1;min-width:0;}
   .kpi-titulo{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
-  .kpi-valor{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;margin-bottom:6px;color:var(--text-primary);}
+  .kpi-valor{font-variant-numeric:tabular-nums;font-size:24px;font-weight:600;margin-bottom:6px;color:var(--text-primary);}
   .kpi-frase{font-size:12.5px;color:var(--text-secondary);line-height:1.5;margin-bottom:8px;}
   .kpi-recom{font-size:12px;border-radius:6px;padding:7px 9px;line-height:1.4;border:1px solid;}
-  .kpi-recom.nv-verde{color:#2fd43f;background:rgba(12,163,12,.12);border-color:rgba(12,163,12,.3);}
-  .kpi-recom.nv-amarillo{color:var(--amarillo);background:rgba(250,178,25,.12);border-color:rgba(250,178,25,.3);}
-  .kpi-recom.nv-rojo{color:#e8706b;background:rgba(208,59,59,.12);border-color:rgba(208,59,59,.3);}
-  .kpi-recom.nv-gris{color:var(--text-muted);background:rgba(255,255,255,.04);border-color:var(--border);}
+  .kpi-recom.nv-verde{color:#1f5a35;background:rgba(47,125,58,.10);border-color:rgba(47,125,58,.35);}
+  .kpi-recom.nv-amarillo{color:#6f4a00;background:rgba(201,138,43,.14);border-color:rgba(201,138,43,.45);}
+  .kpi-recom.nv-rojo{color:#8f2f21;background:rgba(178,59,43,.08);border-color:rgba(178,59,43,.35);}
+  .kpi-recom.nv-gris{color:var(--text-muted);background:var(--bg-card-2);border-color:var(--border);}
 
   .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;}
   .dot.nv-verde{background:var(--verde);} .dot.nv-amarillo{background:var(--amarillo);}
@@ -140,9 +142,9 @@
   .donut-wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
   .donut-legend{display:flex;flex-direction:column;gap:10px;font-size:13px;}
   .donut-legend .fila{display:flex;align-items:center;gap:8px;}
-  .donut-legend .valor{font-family:'IBM Plex Mono',monospace;color:var(--text-primary);font-weight:600;margin-left:auto;padding-left:14px;}
+  .donut-legend .valor{font-variant-numeric:tabular-nums;color:var(--text-primary);font-weight:600;margin-left:auto;padding-left:14px;}
   .donut-center-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;}
-  .donut-center-val{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--text-primary);}
+  .donut-center-val{font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;color:var(--text-primary);}
 
   /* ---------- Línea de tendencia ---------- */
   .linea-chart{display:block;}
@@ -152,23 +154,23 @@
   .bar-label{width:190px;font-size:13px;color:var(--text-secondary);flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .bar-track{flex:1;background:var(--track);border-radius:6px;height:14px;overflow:hidden;}
   .bar-fill{height:100%;border-radius:6px;transition:width .5s ease;}
-  .bar-value{width:200px;text-align:right;font-size:12px;color:var(--text-muted);flex:none;font-family:'IBM Plex Mono',monospace;line-height:1.5;}
+  .bar-value{width:200px;text-align:right;font-size:12px;color:var(--text-muted);flex:none;font-variant-numeric:tabular-nums;line-height:1.5;}
 
   .resumen-texto{
-    background:var(--bg-card-2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;
+    background:var(--bg-card-2);border-left:3px solid var(--ochre-500);border-radius:0 4px 4px 0;
     padding:14px 16px;font-size:13.5px;line-height:1.6;color:var(--text-secondary);
   }
 
   /* ---------- Chips de estadística (actividades administrativas) ---------- */
   .stats-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
   .stat-chip{
-    background:var(--bg-card-2);border:1px solid var(--border);border-radius:8px;
+    background:var(--bg-card-2);border:1px solid var(--border);border-radius:4px;
     padding:12px 16px;flex:1;min-width:140px;
   }
-  .stat-chip .num{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--text-primary);line-height:1.1;}
+  .stat-chip .num{font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;color:var(--text-primary);line-height:1.1;}
   .stat-chip .lbl{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-top:5px;}
   .badge-top{
-    display:inline-block;font-size:10px;font-weight:700;color:var(--bg-page);background:var(--accent);
+    display:inline-block;font-size:11px;font-weight:700;color:#fff;background:var(--accent);
     border-radius:4px;padding:1px 6px;margin-left:8px;text-transform:uppercase;letter-spacing:.03em;vertical-align:1px;
   }
 
@@ -177,16 +179,39 @@
   .drill-link{font-size:12px;text-decoration:none;color:var(--accent);font-weight:600;margin-left:8px;}
   .drill-link:hover{text-decoration:underline;}
 
+  /* tabla de autoservicio */
+  .tabla-wrap{overflow-x:auto;}
+  .tabla{width:100%;border-collapse:collapse;font-size:14px;}
+  .tabla th{text-align:left;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;border-bottom:2px solid var(--border);}
+  .tabla td{padding:10px;border-bottom:1px solid var(--border);vertical-align:top;overflow-wrap:anywhere;}
+  .tabla td.num,.tabla th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .total-grande{font-family:'Fraunces',serif;font-size:34px;font-weight:600;color:var(--green-900);line-height:1;margin:0 8px 0 0;}
+  .total-linea{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin:0 0 14px;color:var(--text-secondary);}
+
   @media (max-width:640px){
-    .bar-label{width:110px;font-size:12px;}
-    .bar-value{width:120px;font-size:11px;}
+    .topbar .right{width:100%;}
+    .btn-ghost{min-height:44px;}
+    .text-ctrl button{width:44px;height:44px;}
+    #sel-ambito{width:100%;min-height:44px;font-size:16px;}
+    .dash-toolbar > div{width:100%;}
+    .btn-actualizar{min-height:44px;width:100%;}
+    .bar-row{flex-wrap:wrap;gap:6px 12px;}
+    .bar-label{width:100%;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;font-size:13px;}
+    .bar-track{flex:1 1 50%;}
+    .bar-value{width:auto;font-size:11.5px;}
     .kpi-card{flex-direction:column;align-items:center;text-align:center;}
+    .tabla thead{display:none;}
+    .tabla tr{display:block;border:1px solid var(--border);border-radius:4px;margin-bottom:10px;padding:6px 10px;}
+    .tabla td{display:flex;justify-content:space-between;gap:12px;border:none;padding:5px 0;text-align:right;}
+    .tabla td::before{content:attr(data-label);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:600;text-align:left;}
   }
 </style>
 </head>
 <body>
 
 <div class="topbar">
+  <img id="topbar-bg-img" class="topbar-bg-img" style="display:none;" alt="">
+  <div id="topbar-bg-overlay" class="topbar-bg-overlay" style="display:none;"></div>
   <div class="topbar-inner">
     <div class="left">
       <div class="seal" id="seal">PS</div>
@@ -239,15 +264,43 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 const PROGRAMAS = ['Adulto Mayor','Discapacidad','Víctimas del Conflicto','Comunidades Indígenas','Renta Ciudadana','Renta Joven','Devolución del IVA','PQR'];
 
+/* Trae todas las filas, de 1000 en 1000 (Supabase corta en 1000 por consulta) */
+async function traerTodo(tabla, orden){
+  const out = [];
+  const paso = 1000;
+  for(let i = 0; ; i += paso){
+    const { data, error } = await sb.from(tabla).select('*').order(orden, { ascending:true }).order('id', { ascending:true }).range(i, i + paso - 1);
+    if(error) return { data:null, error };
+    out.push(...(data || []));
+    if(!data || data.length < paso) break;
+  }
+  return { data: out, error: null };
+}
+
 /* ---------- Apariencia (reutiliza la misma configuración del portal/panel) ---------- */
 async function inicializarApariencia(){
   try{
     const { data } = await sb.from('configuracion_sitio').select('*').eq('id', 1).single();
-    if(!data || !data.logo_url) return;
-    const seal = document.getElementById('seal');
-    const px = data.logo_pos_x ?? 50, py = data.logo_pos_y ?? 50;
-    const lz = (data.logo_zoom ?? 100) / 100;
-    seal.innerHTML = `<img src="${data.logo_url}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima" style="object-position:${px}% ${py}%;transform:scale(${lz});">`;
+    if(!data) return;
+    if(data.logo_url){
+      const seal = document.getElementById('seal');
+      const px = data.logo_pos_x ?? 50, py = data.logo_pos_y ?? 50;
+      const lz = (data.logo_zoom ?? 100) / 100;
+      seal.innerHTML = `<img src="${data.logo_url}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima" style="object-position:${px}% ${py}%;transform:scale(${lz});">`;
+    }
+    if(data.header_fondo_url){
+      const bgImg = document.getElementById('topbar-bg-img');
+      const overlay = document.getElementById('topbar-bg-overlay');
+      const fx = data.header_fondo_pos_x ?? 50, fy = data.header_fondo_pos_y ?? 50;
+      const fz = (data.header_fondo_zoom ?? 100) / 100;
+      const ov = (data.header_fondo_overlay ?? 55) / 100;
+      bgImg.src = data.header_fondo_url;
+      bgImg.style.display = 'block';
+      bgImg.style.objectPosition = `${fx}% ${fy}%`;
+      bgImg.style.transform = `scale(${fz})`;
+      overlay.style.background = `rgba(31,75,63,${ov})`;
+      overlay.style.display = 'block';
+    }
   }catch(e){ /* sin configuración todavía: queda el diseño por defecto */ }
 }
 inicializarApariencia();
@@ -315,9 +368,9 @@ async function cargarTodo(){
   btn.disabled = true; btn.textContent = 'Actualizando…';
   try{
     const [solRes, actRes, encRes, perfRes, autoRes] = await Promise.all([
-      sb.from('solicitudes').select('*'),
-      sb.from('actividades_administrativas').select('*'),
-      sb.from('encuestas_satisfaccion').select('*'),
+      traerTodo('solicitudes', 'created_at'),
+      traerTodo('actividades_administrativas', 'fecha'),
+      traerTodo('encuestas_satisfaccion', 'created_at'),
       sb.from('perfiles_funcionario').select('*'),
       sb.from('consultas_autoservicio').select('programa, canal, creado_en'),
     ]);
@@ -599,7 +652,7 @@ function construirKPIs(kpis, { conProductividad, actividadesScope, bench } = {})
     valorTexto: kpis.eficacia !== null ? redondear1(kpis.eficacia) + '%' : '—',
     nivel: nivEf,
     dial: anilloSVG(kpis.eficacia, nivEf),
-    frase: `${kpis.resueltas} resueltas de ${kpis.total} recibidas. ${TEXTOS.eficacia[nivEf]}`,
+    frase: `${kpis.resueltas} ${kpis.resueltas === 1 ? 'resuelta' : 'resueltas'} de ${kpis.total} ${kpis.total === 1 ? 'recibida' : 'recibidas'}. ${TEXTOS.eficacia[nivEf]}`,
     recomendacion: nivEf==='verde' ? 'Mantén el ritmo actual de resolución.' : TEXTOS.eficaciaRecom[nivEf],
   }));
 
@@ -856,14 +909,13 @@ function construirSeccionAutoservicio(programasAmbito){
   const total = filas.reduce((s,f) => s + f.total, 0);
   let h = `<div class="seccion"><h2>Atenciones de autoservicio</h2>`;
   h += `<p class="seccion-sub">Ciudadanos que consultaron las fechas de pago de un programa y se atendieron solos: sin radicar solicitud y sin intervención del funcionario. Cada consulta cuenta como 1 atención para el responsable del programa.</p>`;
-  h += `<p><strong style="font-size:1.6em">${total}</strong> atenciones de autoservicio en este ámbito</p>`;
+  h += `<p class="total-linea"><span class="total-grande">${total}</span> ${total === 1 ? 'atención de autoservicio' : 'atenciones de autoservicio'} en este ámbito</p>`;
   if(!filas.length){ return h + `<p class="vacio-aviso">Sin datos todavía.</p></div>`; }
-  h += `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:14px">`;
-  h += `<tr style="text-align:left;border-bottom:2px solid var(--line,#ddd)"><th style="padding:6px">Programa</th><th style="padding:6px">Responsable(s)</th><th style="padding:6px">Atenciones</th><th style="padding:6px">Portal / Chat</th></tr>`;
+  h += `<div class="tabla-wrap"><table class="tabla"><thead><tr><th>Programa</th><th>Responsable(s)</th><th class="num">Atenciones</th><th class="num">Portal / Chat</th></tr></thead><tbody>`;
   filas.forEach(f => {
-    h += `<tr style="border-bottom:1px solid var(--line,#eee)"><td style="padding:6px">${f.programa}</td><td style="padding:6px">${f.resp.length ? f.resp.join(', ') : '—'}</td><td style="padding:6px"><strong>${f.total}</strong></td><td style="padding:6px">${f.portal} / ${f.chat}</td></tr>`;
+    h += `<tr><td data-label="Programa">${f.programa}</td><td data-label="Responsable(s)">${f.resp.length ? f.resp.join(', ') : '—'}</td><td class="num" data-label="Atenciones"><strong>${f.total}</strong></td><td class="num" data-label="Portal / Chat">${f.portal} / ${f.chat}</td></tr>`;
   });
-  h += `</table></div></div>`;
+  h += `</tbody></table></div></div>`;
   return h;
 }
 
@@ -971,7 +1023,7 @@ function renderDashboard(){
       return {
         etiqueta: nombre,
         valor: productividad,
-        detalle: `${resueltasF} resueltas · ${cantActFunc} activ.${minActFunc ? ' (' + minActFunc + ' min)' : ''}`,
+        detalle: `${resueltasF} ${resueltasF === 1 ? 'resuelta' : 'resueltas'} · ${cantActFunc} activ.${minActFunc ? ' (' + minActFunc + ' min)' : ''}`,
         valorAmbito: esCoordinador ? ('funcionario:' + nombre) : null,
       };
     }).sort((a,b) => b.valor - a.valor);

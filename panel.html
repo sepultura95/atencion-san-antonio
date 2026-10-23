@@ -15,6 +15,7 @@
     --ochre-600:#b5812a;
     --ochre-500:#c98a2b;
     --ochre-100:#f3e4c6;
+    --on-ochre:#0f2a21;
     --paper:#f7f5ee;
     --paper-dim:#efece2;
     --ink:#272420;
@@ -60,13 +61,17 @@
   }
   .topbar-bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;transform-origin:center;}
   .topbar-bg-overlay{position:absolute;inset:0;z-index:0;pointer-events:none;}
-  .topbar-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:14px;}
+  .topbar-inner{position:relative;z-index:1;display:flex;flex-direction:column;gap:12px;}
+  .topbar-top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  .topbar-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .topbar-actions{display:contents;}
+  .btn-menu{display:none;}
   .topbar .left{display:flex;align-items:center;gap:12px;}
   .seal{
     width:36px;height:36px;border-radius:50%;
     background:var(--ochre-500);
     display:flex;align-items:center;justify-content:center;
-    font-family:'Fraunces',serif;font-weight:700;color:var(--green-900);
+    font-family:'Fraunces',serif;font-weight:700;color:var(--on-ochre);
     font-size:15px;overflow:hidden;flex:none;
   }
   .seal img{width:100%;height:100%;object-fit:cover;transform-origin:center;}
@@ -74,7 +79,7 @@
   .topbar .sub{font-size:12px;color:var(--ochre-100);margin-top:2px;}
   .btn-ghost{
     background:transparent;border:1px solid rgba(255,255,255,.4);color:var(--white);
-    padding:8px 14px;border-radius:4px;font-size:13px;
+    padding:8px 14px;border-radius:4px;font-size:13px;white-space:nowrap;min-height:36px;
   }
   .btn-ghost:hover{background:rgba(255,255,255,.12);}
 
@@ -87,13 +92,13 @@
   .update-toast.show{display:block;}
   .update-toast .ut-actions{display:flex;gap:10px;margin-top:10px;}
   .update-toast button{border:none;border-radius:6px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;}
-  .update-toast .ut-reload{background:var(--ochre-500);color:var(--green-900);}
+  .update-toast .ut-reload{background:var(--ochre-500);color:var(--on-ochre);}
   .update-toast .ut-dismiss{background:rgba(255,255,255,0.15);color:var(--white);}
 
   .text-ctrl{display:flex;gap:4px;flex:none;}
   .text-ctrl button{
     background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.35);color:var(--white);
-    width:30px;height:30px;border-radius:6px;font-weight:700;cursor:pointer;line-height:1;
+    width:36px;height:36px;border-radius:6px;font-weight:700;cursor:pointer;line-height:1;
   }
   .text-ctrl button:hover,.text-ctrl button:focus-visible{background:rgba(255,255,255,0.25);}
   .text-ctrl button:nth-child(1){font-size:11px;}
@@ -127,6 +132,8 @@
   .staff-shell.active{display:grid;grid-template-columns:340px 1fr;gap:0;height:calc(100vh - 66px);}
   .req-list{border-right:1px solid var(--line);background:var(--white);overflow-y:auto;}
   .req-list .filters{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:6px;flex-wrap:wrap;}
+  .req-list .buscar{padding:12px 14px 0;}
+  .req-list .buscar input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:4px;font-size:14px;background:var(--paper);}
   .req-list .programas{padding:12px 14px 14px;border-bottom:1px solid var(--line);background:var(--paper-dim);}
   .programas-label{font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px;}
   .programas-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
@@ -140,7 +147,7 @@
     transition:background .12s ease,border-color .12s ease;
   }
   .chip-programa:hover{background:var(--ochre-100);}
-  .chip-programa.active{background:var(--ochre-500);border-color:var(--ochre-500);color:var(--white);}
+  .chip-programa.active{background:var(--ochre-500);border-color:var(--ochre-500);color:var(--on-ochre);}
   .chip-programa[data-v="todas"]{grid-column:1 / -1;background:var(--white);}
   .chip-programa[data-v="todas"].active{background:var(--green-700);border-color:var(--green-700);color:var(--white);}
   .req-item{
@@ -149,7 +156,8 @@
   .req-item:hover{background:var(--paper-dim);}
   .req-item.selected{background:var(--ochre-100);}
   .req-item .top-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
-  .req-item .nombre{font-weight:600;font-size:14px;}
+  .req-item .nombre{font-weight:600;font-size:14px;min-width:0;overflow-wrap:anywhere;}
+  .req-item .tag{flex:none;}
   .req-item .meta{font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
   .tag{display:inline-block;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:.03em;}
   .tag-pendiente{background:#f3e4c6;color:#8a5c13;}
@@ -162,9 +170,10 @@
   .detail-empty{color:var(--ink-soft);font-size:14px;padding:26px 32px;}
   .detail h2{font-size:21px;}
   .detail .grid-info{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin:18px 0 22px;font-size:13.5px;}
+  .detail .grid-info div{min-width:0;overflow-wrap:anywhere;}
   .detail .grid-info div span{display:block;color:var(--ink-soft);font-size:11px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px;}
   .thread{border:1px solid var(--line);border-radius:4px;background:var(--white);padding:4px 0;margin-bottom:18px;}
-  .msg{padding:10px 16px;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .msg{padding:10px 16px;border-bottom:1px solid var(--line);font-size:13.5px;overflow-wrap:anywhere;}
   .msg:last-child{border-bottom:none;}
   .msg .who{font-size:11px;font-weight:600;color:var(--ink-soft);margin-bottom:3px;text-transform:uppercase;}
   .msg.from-ciudadano{background:var(--paper);}
@@ -184,6 +193,17 @@
   .reply-row select{padding:9px 10px;border:1px solid var(--line);border-radius:4px;font-size:13.5px;background:var(--white);}
   .btn-save{background:var(--green-700);color:var(--white);border:none;padding:10px 18px;border-radius:4px;font-size:13.5px;font-weight:600;}
   .btn-save:hover{background:var(--green-900);}
+  .quick-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;}
+  .quick-row label{font-size:13px;font-weight:600;color:var(--green-700);}
+  .quick-row select{flex:1;min-width:200px;padding:9px 10px;border:1px solid var(--line);border-radius:4px;font-size:13.5px;background:var(--white);min-height:42px;}
+  .quick-hint{font-size:12px;color:var(--ink-soft);margin-bottom:8px;}
+  .resuelta-box{background:#e8f1ea;border:1px solid #b9d3be;border-left:4px solid var(--green-700);border-radius:4px;padding:14px 16px;margin-top:16px;font-size:13.5px;line-height:1.5;}
+  .resuelta-box b{display:block;color:var(--green-700);font-size:15px;margin-bottom:2px;}
+  .resuelta-box .rb-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center;}
+  .btn-reabrir{background:var(--white);color:var(--green-700);border:1px solid var(--green-700);padding:10px 14px;border-radius:4px;font-weight:600;font-size:13.5px;cursor:pointer;min-height:42px;}
+  .btn-reabrir.confirm{background:var(--red-700);color:#fff;border-color:var(--red-700);}
+  .toast-estado{display:none;position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--green-900);color:#fff;padding:12px 18px;border-radius:6px;font-size:14px;font-weight:600;z-index:300;max-width:92vw;box-shadow:0 6px 20px rgba(0,0,0,.3);}
+  .toast-estado.show{display:block;}
   .save-msg{font-size:12.5px;color:var(--green-700);margin-left:4px;}
 
   /* ---------- Badge de canal ---------- */
@@ -191,8 +211,8 @@
 
   /* ---------- Registro de atención presencial ---------- */
   .btn-presencial{
-    background:var(--ochre-500);color:var(--green-900);border:none;padding:8px 14px;border-radius:4px;
-    font-size:13px;font-weight:700;
+    background:var(--ochre-500);color:var(--on-ochre);border:none;padding:8px 14px;border-radius:4px;
+    font-size:13px;font-weight:700;white-space:nowrap;min-height:36px;
   }
   .btn-presencial:hover{background:var(--ochre-600);}
   .modal-overlay{
@@ -236,7 +256,18 @@
     .topbar{padding:12px 14px;}
     .topbar h1{font-size:15px;}
     .topbar .sub{font-size:11px;}
-    .btn-ghost{padding:7px 11px;font-size:12px;}
+    .btn-ghost{padding:10px 12px;font-size:13px;min-height:44px;}
+    .btn-presencial{min-height:44px;padding:10px 14px;}
+    .text-ctrl button{width:44px;height:44px;}
+    .topbar-bar{width:100%;}
+    .btn-menu{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin-left:auto;}
+    .topbar-actions{display:none;width:100%;display:none;}
+    .topbar.menu-open .topbar-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .topbar.menu-open .topbar-actions .btn-ghost{white-space:normal;text-align:center;}
+    .chip-programa{min-height:44px;}
+    .chip-filter{min-height:40px;padding:8px 14px;font-size:13px;}
+    .req-list .buscar input{min-height:44px;font-size:16px;}
+    .field input,.modal-card .field input,.modal-card .field select,.modal-card .field textarea,.reply-box textarea,.reply-row select{font-size:16px;}
 
     .staff-shell.active{
       display:block;
@@ -260,30 +291,35 @@
   <img id="topbar-bg-img" class="topbar-bg-img" style="display:none;" alt="">
   <div id="topbar-bg-overlay" class="topbar-bg-overlay" style="display:none;"></div>
   <div class="topbar-inner">
-    <div class="left">
-      <div class="seal" id="seal">PS</div>
-      <div>
-        <h1>Panel de funcionarios</h1>
-        <div class="sub" id="topbar-sub">Programas Sociales — Alcaldía de San Antonio</div>
+    <div class="topbar-top">
+      <div class="left">
+        <div class="seal" id="seal">PS</div>
+        <div>
+          <h1>Panel de funcionarios</h1>
+          <div class="sub" id="topbar-sub">Programas Sociales — Alcaldía de San Antonio</div>
+        </div>
       </div>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center;">
       <div class="text-ctrl" role="group" aria-label="Tamaño del texto">
         <button type="button" onclick="cambiarTextoTamano(-1)" aria-label="Disminuir tamaño de texto">A-</button>
         <button type="button" onclick="cambiarTextoTamano(0)" aria-label="Tamaño de texto normal">A</button>
         <button type="button" onclick="cambiarTextoTamano(1)" aria-label="Aumentar tamaño de texto">A+</button>
       </div>
-      <button class="btn-ghost" id="btn-apariencia" style="display:none;">🎨 Apariencia</button>
-      <button class="btn-ghost" id="btn-avisos" style="display:none;">📅 Días sin atención</button>
-      <button class="btn-ghost" id="btn-pagos" style="display:none;">💰 Fechas de pago</button>
-      <button class="btn-ghost" id="btn-documentos" style="display:none;">📁 Documentos</button>
-      <button class="btn-ghost" id="btn-actividades" style="display:none;">📋 Registrar actividad</button>
-      <a class="btn-ghost" id="btn-dashboard" href="dashboard.html" style="display:none;text-decoration:none;">📈 Indicadores</a>
-      <button class="btn-ghost" id="btn-exportar-excel" style="display:none;">📊 Exportar a Excel</button>
-      <button class="btn-ghost" id="btn-borrar-prueba" style="display:none;color:var(--red-700);border-color:var(--red-700);">🗑️ Borrar datos de prueba</button>
+    </div>
+    <div class="topbar-bar">
       <button class="btn-presencial" id="btn-presencial" style="display:none;">➕ Iniciar atención presencial</button>
-      <button class="btn-ghost" id="btn-cambiar-pass" style="display:none;">🔑 Cambiar contraseña</button>
-      <button class="btn-ghost" id="btn-logout" style="display:none;">Cerrar sesión</button>
+      <button type="button" class="btn-ghost btn-menu" id="btn-menu" aria-expanded="false" aria-controls="topbar-actions">☰ Más opciones</button>
+      <div class="topbar-actions" id="topbar-actions">
+        <button class="btn-ghost" id="btn-apariencia" style="display:none;">🎨 Apariencia</button>
+        <button class="btn-ghost" id="btn-avisos" style="display:none;">📅 Días sin atención</button>
+        <button class="btn-ghost" id="btn-pagos" style="display:none;">💰 Fechas de pago</button>
+        <button class="btn-ghost" id="btn-documentos" style="display:none;">📁 Documentos</button>
+        <button class="btn-ghost" id="btn-actividades" style="display:none;">📋 Registrar actividad</button>
+        <a class="btn-ghost" id="btn-dashboard" href="dashboard.html" style="display:none;text-decoration:none;">📈 Indicadores</a>
+        <button class="btn-ghost" id="btn-exportar-excel" style="display:none;">📊 Exportar a Excel</button>
+        <button class="btn-ghost" id="btn-borrar-prueba" style="display:none;color:var(--red-700);border-color:var(--red-700);">🗑️ Borrar datos de prueba</button>
+        <button class="btn-ghost" id="btn-cambiar-pass" style="display:none;">🔑 Cambiar contraseña</button>
+        <button class="btn-ghost" id="btn-logout" style="display:none;">Cerrar sesión</button>
+      </div>
     </div>
   </div>
 </div>
@@ -312,7 +348,7 @@
       </div>
       <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn-small" id="btn-ap-logo-subir" style="background:var(--green-700);color:#fff;">Subir logo</button>
-        <button class="btn-small" id="btn-ap-logo-guardar-pos" style="background:var(--ochre-600);color:#fff;display:none;">Guardar posición</button>
+        <button class="btn-small" id="btn-ap-logo-guardar-pos" style="background:var(--green-700);color:#fff;display:none;">Guardar posición</button>
         <button class="btn-small" id="btn-ap-logo-quitar" style="background:var(--paper-dim);">Quitar logo (usar por defecto)</button>
       </div>
     </div>
@@ -337,7 +373,7 @@
       </div>
       <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn-small" id="btn-ap-fondo-subir" style="background:var(--green-700);color:#fff;">Subir fondo</button>
-        <button class="btn-small" id="btn-ap-fondo-guardar-pos" style="background:var(--ochre-600);color:#fff;display:none;">Guardar ajustes</button>
+        <button class="btn-small" id="btn-ap-fondo-guardar-pos" style="background:var(--green-700);color:#fff;display:none;">Guardar ajustes</button>
         <button class="btn-small" id="btn-ap-fondo-quitar" style="background:var(--paper-dim);">Quitar fondo (usar color por defecto)</button>
       </div>
     </div>
@@ -607,11 +643,11 @@
     <h2>Acceso restringido</h2>
     <p>Ingresa con tu correo institucional asignado.</p>
     <div class="field">
-      <label>Correo</label>
+      <label for="login-email">Correo</label>
       <input type="email" id="login-email" autocomplete="username">
     </div>
     <div class="field">
-      <label>Contraseña</label>
+      <label for="login-pass">Contraseña</label>
       <input type="password" id="login-pass" autocomplete="current-password">
     </div>
     <button class="btn-primary" id="btn-login">Ingresar</button>
@@ -651,6 +687,7 @@
 
 <div class="staff-shell" id="staff-shell">
   <div class="req-list">
+    <div class="buscar"><label for="buscar-sol" class="sr-only">Buscar solicitud</label><input type="search" id="buscar-sol" placeholder="Buscar por nombre, documento o programa" autocomplete="off"></div>
     <div class="programas" id="programas" style="display:none;"></div>
     <div class="filters" id="filters"></div>
     <div id="list-body"></div>
@@ -660,6 +697,7 @@
   </div>
 </div>
 
+<div class="toast-estado" id="toast-estado" role="status" aria-live="polite"></div>
 <div class="update-toast" id="update-toast" role="status" aria-live="polite">
   Hay una versión más reciente del panel.
   <div class="ut-actions">
@@ -717,7 +755,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-21-2';
+const APP_VERSION = '2026-10-23-1';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -755,6 +793,8 @@ setInterval(verificarVersionNueva, 5 * 60 * 1000);
 
 let perfil = null;          // {id, nombre, programa}
 let solicitudes = [];       // cache de lo que la RLS deja ver
+let terminoBusqueda = '';
+function quitarTildes(t){ return String(t).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
 let filtroEstado = 'todas';
 let filtroPrograma = 'todas';
 let selectedId = null;
@@ -943,8 +983,18 @@ function suscribirCambiosSolicitudes(){
   canalSolicitudes = sb
     .channel('panel-solicitudes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'solicitudes' }, async () => {
+      // Si el funcionario está escribiendo una respuesta, no se la borramos al refrescar.
+      const ta = document.getElementById('reply-text');
+      const es = document.getElementById('estado-select');
+      const borrador = { id: selectedId, texto: ta ? ta.value : '', estado: es ? es.value : '' };
       await loadSolicitudes();
       renderDetail();
+      if(borrador.id && borrador.id === selectedId && borrador.texto){
+        const ta2 = document.getElementById('reply-text');
+        const es2 = document.getElementById('estado-select');
+        if(ta2) ta2.value = borrador.texto;
+        if(es2 && borrador.estado) es2.value = borrador.estado;
+      }
     })
     .subscribe();
 }
@@ -989,7 +1039,7 @@ function renderFilters(){
 
 async function loadSolicitudes(){
   // La RLS ya filtra por programa del funcionario (o deja ver todo si es 'TODAS').
-  const { data, error } = await sb.from('solicitudes').select('*').order('created_at', { ascending:true });
+  const { data, error } = await traerTodo('solicitudes', 'created_at');
   if(error){ console.error(error); document.getElementById('list-body').innerHTML = '<div style="padding:16px;font-size:13px;color:var(--ink-soft);">No se pudo cargar la lista.</div>'; return; }
   solicitudes = (data || []).sort((a,b)=>{
     if(a.prioritaria !== b.prioritaria) return a.prioritaria ? -1 : 1;
@@ -1027,6 +1077,10 @@ function renderList(){
   const items = solicitudes.filter(s => {
     const pasaPrograma = filtroPrograma === 'todas' ? true : s.programa === filtroPrograma;
     if(!pasaPrograma) return false;
+    if(terminoBusqueda){
+      const hay = quitarTildes([s.nombre, s.documento, s.programa, s.tipo].filter(Boolean).join(' '));
+      if(!hay.includes(terminoBusqueda)) return false;
+    }
     if(filtroEstado === 'archivadas') return estaArchivada(s);
     const pasaEstado = filtroEstado === 'todas' ? true : s.estado === filtroEstado;
     return pasaEstado && !estaArchivada(s);
@@ -1035,7 +1089,7 @@ function renderList(){
     const msg = filtroEstado === 'archivadas'
       ? 'No hay solicitudes archivadas todavía (se archivan solas a los 7 días de resueltas).'
       : 'No hay solicitudes en este filtro.';
-    body.innerHTML = `<div style="padding:16px;font-size:13px;color:var(--ink-soft);">${msg}</div>`;
+    body.innerHTML = `<div style="padding:16px;font-size:13px;color:var(--ink-soft);">${terminoBusqueda ? 'No se encontró ninguna solicitud con esa búsqueda.' : msg}</div>`;
     return;
   }
   body.innerHTML = items.map(s => {
@@ -1046,8 +1100,8 @@ function renderList(){
         <span class="nombre">${escapeHtml(s.nombre || 'Sin nombre')}</span>
         <span class="tag tag-${s.estado}">${labelEstado(s.estado)}</span>
       </div>
-      <div class="meta">${escapeHtml(s.programa || '')} · ${escapeHtml(s.tipo || '')} ${s.prioritaria ? '<span class="tag tag-prioritaria">Prioritaria</span>' : ''}${s.canal === 'presencial' ? '<span class="tag tag-canal">Presencial</span>' : ''}${s._turno ? `<span class="tag tag-canal">Turno ${s._turno}</span>` : ''}</div>
-      <div class="meta">${fecha}</div>
+      <div class="meta">${escapeHtml([s.programa, s.tipo].filter(Boolean).join(' · '))} ${s.prioritaria ? '<span class="tag tag-prioritaria">Prioritaria</span>' : ''}${s.canal === 'presencial' ? '<span class="tag tag-canal">Presencial</span>' : ''}${s._turno ? `<span class="tag tag-canal">Turno ${s._turno}</span>` : ''}</div>
+      ${fecha ? `<div class="meta">${fecha}</div>` : ''}
     </div>`;
   }).join('');
   body.querySelectorAll('.req-item').forEach(el=>{
@@ -1063,12 +1117,192 @@ function labelEstado(e){
   return { pendiente:'Pendiente', en_proceso:'En proceso', resuelto:'Resuelto', en_curso:'En atención' }[e] || e || '';
 }
 
+/* ============================================================
+   Respuestas rápidas por programa
+   El funcionario elige una, se escribe en la caja, la ajusta y la envía con Guardar.
+   Nunca se envía sola. Lo que va entre [COMPLETAR: …] hay que llenarlo antes de guardar.
+============================================================ */
+const RR_SALUDO = 'Cordial saludo, {nombre}.\n\n';
+const RR_FIRMA = '\n\nAtentamente,\n{funcionario}\nOficina de Programas Sociales — Alcaldía de San Antonio, Tolima';
+
+const RR_GENERALES = [
+  { t:'Solicitud recibida', c:'Hemos recibido su solicitud{radicado} del programa {programa}. Actualmente se encuentra en revisión por parte de la Oficina de Programas Sociales. Le daremos respuesta dentro de los términos establecidos por la ley. Puede consultar el estado de su solicitud en cualquier momento en el portal, con su número de radicado.' },
+  { t:'En proceso de verificación', c:'Le informamos que su solicitud{radicado} se encuentra en proceso de verificación de la información suministrada. Una vez concluya la revisión le comunicaremos el resultado por este mismo medio.' },
+  { t:'Documentos faltantes', c:'Para continuar con el trámite de su solicitud{radicado} requerimos los siguientes documentos: [COMPLETAR: documentos requeridos]. Puede adjuntarlos por este mismo medio, desde la opción de consultar estado del portal, o presentarlos en la Oficina de Programas Sociales en horario de atención.' },
+  { t:'Aclarar o ampliar información', c:'Para dar trámite a su solicitud{radicado} necesitamos que nos aclare o complemente la siguiente información: [COMPLETAR: información requerida]. Puede responder por este mismo medio.' },
+  { t:'Fechas de pago', c:'Las fechas de pago del programa {programa} se encuentran publicadas en el portal, en el botón «Fechas de pago», organizadas por programa. Le recomendamos consultarlas allí, ya que se actualizan cuando la entidad responsable las informa. Si pasada la fecha informada usted no ha recibido su pago, escríbanos nuevamente indicando su número de documento.' },
+  { t:'Invitación a atención presencial', c:'Para atender su caso de manera personalizada, lo invitamos a acercarse a la Oficina de Programas Sociales de la Alcaldía de San Antonio, Tolima, en horario de atención, con su documento de identidad original.' },
+  { t:'Solicitud resuelta', c:'Le informamos que su solicitud{radicado} ha sido atendida y se da por resuelta. Si requiere información adicional puede radicar una nueva solicitud en el portal. Le invitamos a calificar la atención recibida; sus comentarios nos ayudan a mejorar el servicio.' },
+  { t:'Fuera de competencia del programa', c:'Revisada su solicitud{radicado}, le informamos que el asunto planteado no corresponde a la competencia del programa {programa}. Le sugerimos dirigirse a [COMPLETAR: entidad o dependencia competente]. Quedamos atentos para orientarle en lo que requiera.' },
+  { t:'Solicitud repetida', c:'Verificamos que su solicitud{radicado} corresponde a un trámite que ya se encuentra en curso. Para evitar demoras, le pedimos hacer seguimiento con el radicado inicial. Con gusto atenderemos cualquier novedad.' }
+];
+
+const RR_PROGRAMA = {
+  'Adulto Mayor': [
+    { t:'Pago no recibido', c:'Hemos registrado su reporte de que no ha recibido el pago del programa de Adulto Mayor (Colombia Mayor). Verificaremos su situación con la entidad responsable del programa y le informaremos el resultado. Mientras tanto, consulte en el portal las fechas de pago vigentes.' },
+    { t:'Actualización de datos', c:'Recibimos su solicitud de actualización de datos en el programa de Adulto Mayor. Para completarla, por favor acérquese a la Oficina de Programas Sociales con su documento de identidad original, o adjunte por este medio una copia legible del mismo.' },
+    { t:'Inclusión en el programa', c:'Su solicitud de inclusión en el programa de Adulto Mayor será revisada conforme a los criterios y listados definidos por la entidad que administra el programa. Le informaremos cualquier novedad que se publique.' }
+  ],
+  'Discapacidad': [
+    { t:'Registro de Localización y Caracterización', c:'Para el Registro de Localización y Caracterización de Personas con Discapacidad, le orientamos para que se acerque a la Oficina de Programas Sociales con su documento de identidad y, si lo tiene, el soporte médico o certificado que acredite la condición, para realizar o actualizar el registro.' },
+    { t:'Actualización de datos', c:'Hemos recibido su solicitud de actualización de datos en el registro del programa de Discapacidad. Un funcionario verificará la información y le comunicará cuando la novedad quede registrada.' }
+  ],
+  'Víctimas del Conflicto': [
+    { t:'Orientación sobre la ruta de atención', c:'Le brindamos orientación sobre la ruta de atención para víctimas del conflicto armado. Según su caso, podemos acompañarle desde el municipio y orientarle ante las entidades competentes del Sistema Nacional de Atención y Reparación Integral a las Víctimas. Para ello le invitamos a acercarse a la oficina con su documento de identidad.' },
+    { t:'Actualización de datos de contacto', c:'Recibimos su solicitud de actualización de datos de contacto y ubicación. Para dejarla registrada, por favor confírmenos por este medio su nuevo número de contacto y su dirección actual.' }
+  ],
+  'Comunidades Indígenas': [
+    { t:'Orientación con enfoque diferencial', c:'Hemos recibido su solicitud y será revisada con enfoque diferencial. Para brindarle una orientación precisa, le invitamos a acercarse a la oficina con su documento de identidad y los documentos que su comunidad o autoridad tradicional haya expedido, según el trámite.' },
+    { t:'Soporte de pertenencia a la comunidad', c:'Para trámites que requieren soporte de pertenencia a una comunidad indígena, necesitamos el documento que lo acredite, expedido por la autoridad correspondiente. Puede adjuntarlo por este medio o presentarlo en la oficina.' }
+  ],
+  'Renta Ciudadana': [
+    { t:'Estado del hogar en el programa', c:'Renta Ciudadana es un programa de orden nacional: la inclusión, la liquidación y el pago de los hogares los define la entidad nacional responsable. Desde la Oficina de Programas Sociales verificamos la información disponible y le orientamos. Consulte en el portal las fechas de pago publicadas.' },
+    { t:'Novedades de datos del hogar', c:'Para reportar novedades en los datos del hogar (teléfono, dirección o integrantes), le orientamos para que se acerque a la oficina con los documentos de identidad de los integrantes del hogar.' }
+  ],
+  'Renta Joven': [
+    { t:'Estado en el programa', c:'Renta Joven es un programa de orden nacional: la inclusión y el pago los define la entidad nacional responsable. Desde la Oficina de Programas Sociales verificamos la información disponible y le orientamos. Consulte en el portal las fechas de pago publicadas.' },
+    { t:'Novedades de datos', c:'Para reportar novedades (datos personales, de contacto o de su situación académica), acérquese a la oficina con su documento de identidad y el soporte que corresponda.' }
+  ],
+  'Devolución del IVA': [
+    { t:'Estado del pago', c:'La devolución del IVA es un programa de orden nacional y los pagos se realizan por ciclos definidos por la entidad responsable. Las fechas vigentes se publican en el portal, en el botón «Fechas de pago». Si ya pasó la fecha y no ha recibido el pago, indíquenos su número de documento para verificar.' },
+    { t:'Novedad de datos o medio de pago', c:'Para reportar una novedad en los datos del beneficiario o en el medio de pago, acérquese a la oficina con su documento de identidad. Le orientaremos sobre el procedimiento.' }
+  ],
+  'PQR': [
+    { t:'Queja recibida', c:'Hemos recibido su queja y la trasladamos a la dependencia correspondiente para su análisis. Le comunicaremos las acciones adoptadas dentro de los términos de ley. Lamentamos los inconvenientes presentados.' },
+    { t:'Reclamo recibido', c:'Hemos recibido su reclamo{radicado}. Estamos verificando la situación descrita y le informaremos el resultado dentro de los términos establecidos por la ley.' },
+    { t:'Sugerencia recibida', c:'Agradecemos su sugerencia. Ha sido registrada y se tendrá en cuenta para mejorar la atención de la Oficina de Programas Sociales.' },
+    { t:'Respuesta de fondo a una petición', c:'En respuesta a su petición{radicado}: [COMPLETAR: respuesta de fondo].' },
+    { t:'Denuncia recibida', c:'Hemos recibido su denuncia y la remitiremos a la instancia competente para su trámite. Por la naturaleza del asunto, es posible que la dependencia que la reciba se comunique con usted.' }
+  ]
+};
+
+// Notas para la atención presencial (se guardan como nota interna del turno, sin saludo ni firma)
+const RR_PRESENCIAL = [
+  { t:'Orientación brindada', c:'Se brindó orientación al ciudadano sobre el programa {programa} y se resolvieron sus inquietudes.', plano:true },
+  { t:'Documentos recibidos', c:'Se recibieron y verificaron los documentos presentados por el ciudadano para el trámite en el programa {programa}.', plano:true },
+  { t:'Datos actualizados', c:'Se actualizaron los datos de contacto del ciudadano en el registro del programa {programa}.', plano:true },
+  { t:'Fechas de pago informadas', c:'Se informó al ciudadano sobre las fechas de pago vigentes del programa {programa}.', plano:true },
+  { t:'Remitido a otra entidad', c:'Se remitió al ciudadano a [COMPLETAR: entidad o dependencia] para continuar el trámite.', plano:true }
+];
+
+function nombrePropio(n){
+  return String(n || '').trim().toLowerCase().replace(/(^|\s)([a-záéíóúüñ])/g, (m, a, b) => a + b.toUpperCase()) || 'ciudadano(a)';
+}
+
+function listasRespuestasRapidas(s){
+  if(s.canal === 'presencial' && s.estado === 'en_curso') return { grupos: [['Atención presencial', RR_PRESENCIAL]] };
+  const propias = RR_PROGRAMA[s.programa] || [];
+  return { grupos: [[s.programa ? 'Programa ' + s.programa : 'Del programa', propias], ['Generales', RR_GENERALES]].filter(g => g[1].length) };
+}
+
+function armarRespuestaRapida(p, s){
+  const radicado = s.radicado_legible ? ' con radicado ' + s.radicado_legible : '';
+  let t = p.plano ? p.c : RR_SALUDO + p.c + RR_FIRMA;
+  return t
+    .replace(/\{nombre\}/g, nombrePropio(s.nombre))
+    .replace(/\{programa\}/g, s.programa || 'solicitado')
+    .replace(/\{funcionario\}/g, (perfil && perfil.nombre) || 'Funcionario(a) de Programas Sociales')
+    .replace(/\{radicado\}/g, radicado);
+}
+
+/* Enlaces: solo se abren archivos de nuestro propio almacenamiento */
+const PREFIJO_STORAGE = SUPABASE_URL + '/storage/v1/object/public/';
+function urlSegura(u){ return (typeof u === 'string' && u.startsWith(PREFIJO_STORAGE)) ? u : null; }
+
+/* Nombre de archivo apto para el almacenamiento (sin tildes, espacios ni símbolos) */
+function nombreArchivoSeguro(nombre){
+  const partes = String(nombre || 'archivo').split('.');
+  const ext = partes.length > 1 ? partes.pop().toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+  const base = partes.join('.').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'archivo';
+  return base + (ext ? '.' + ext : '');
+}
+
+/* Trae todas las filas, de 1000 en 1000 (Supabase corta en 1000 por consulta) */
+async function traerTodo(tabla, orden){
+  const out = [];
+  const paso = 1000;
+  for(let i = 0; ; i += paso){
+    const { data, error } = await sb.from(tabla).select('*').order(orden, { ascending:true }).order('id', { ascending:true }).range(i, i + paso - 1);
+    if(error) return { data:null, error };
+    out.push(...(data || []));
+    if(!data || data.length < paso) break;
+  }
+  return { data: out, error: null };
+}
+
+let toastTimer = null;
+function mostrarToast(texto){
+  const el = document.getElementById('toast-estado');
+  if(!el) return;
+  el.textContent = texto;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> el.classList.remove('show'), 5000);
+}
+
+function mensajeError(e){
+  const m = String((e && (e.message || e.details)) || '');
+  if(m.includes('YA_RESUELTA')) return 'Esta solicitud ya fue resuelta (probablemente por otro funcionario). Se actualizó la lista.';
+  if(m.includes('SIN_CONTENIDO')) return 'Escribe una respuesta o adjunta un documento.';
+  if(m.includes('ARCHIVO_INVALIDO')) return 'El documento adjunto no es válido.';
+  if(m.includes('NO_ENCONTRADA')) return 'No se encontró la solicitud o no pertenece a tus programas.';
+  if(m.includes('TEXTO_LARGO')) return 'La respuesta es demasiado larga (máximo 5.000 caracteres).';
+  if(m.includes('SIN_PERMISO')) return 'Solo la coordinación o quien resolvió la solicitud puede reabrirla.';
+  if(m.includes('NO_ESTA_RESUELTA')) return 'La solicitud ya no está resuelta.';
+  if(m.includes('SIN_SESION') || m.includes('JWT')) return 'Tu sesión venció. Vuelve a iniciar sesión.';
+  if(m.includes('USAR_FUNCION')) return 'Falta ejecutar el SQL de seguridad en Supabase (sql_seguridad_y_respuestas.sql).';
+  if(m.includes('responder_solicitud') && (m.includes('does not exist') || m.includes('schema cache'))) return 'Falta ejecutar el SQL de seguridad en Supabase (sql_seguridad_y_respuestas.sql).';
+  return 'Error al guardar.';
+}
+
 function renderDetail(){
   const wrap = document.getElementById('detail');
   const s = solicitudes.find(x => x.id === selectedId);
   if(!s){ wrap.innerHTML = '<div class="detail-empty">Selecciona una solicitud de la lista para ver el detalle.</div>'; return; }
   const hist = s.historial || [];
   const esPresencialEnCurso = s.canal === 'presencial' && s.estado === 'en_curso';
+  const resuelta = s.estado === 'resuelto';
+  const esCoord = !!(perfil && perfil.misProgramas && perfil.misProgramas.includes('TODAS'));
+  const puedeReabrir = resuelta && (esCoord || (s.atendido_por && perfil && s.atendido_por === perfil.nombre));
+  const cuandoResuelta = s.resuelto_ts || s.actualizado_en;
+  const vecesReabierta = Array.isArray(s.auditoria) ? s.auditoria.filter(x => x && x.accion === 'reabrir').length : 0;
+  const estadoInicial = (resuelta || esPresencialEnCurso) ? 'resuelto' : (s.estado === 'pendiente' ? 'en_proceso' : s.estado);
+
+  // Respuestas rápidas del programa de esta solicitud
+  const rr = listasRespuestasRapidas(s);
+  const plantillas = [];
+  const opcionesRR = rr.grupos.map(([grupo, items]) =>
+    `<optgroup label="${escapeHtml(grupo)}">${items.map(p => { plantillas.push(p); return `<option value="${plantillas.length - 1}">${escapeHtml(p.t)}</option>`; }).join('')}</optgroup>`
+  ).join('');
+
+  const bloqueInferior = resuelta ? `
+    <div class="resuelta-box" role="status">
+      <b>✓ Solicitud resuelta</b>
+      Resuelta por ${escapeHtml(s.atendido_por || '—')}${cuandoResuelta ? ' · ' + new Date(cuandoResuelta).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}) : ''}.${vecesReabierta ? ` Reabierta ${vecesReabierta} ${vecesReabierta === 1 ? 'vez' : 'veces'}.` : ''} Ya no admite nuevas respuestas.
+      ${puedeReabrir ? `<div class="rb-row"><button class="btn-reabrir" id="btn-reabrir">Reabrir solicitud</button><span class="save-msg" id="save-msg" role="status" aria-live="polite"></span></div>` : ''}
+    </div>` : `
+    <div class="reply-box">
+      ${esPresencialEnCurso ? `<div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;">⏱️ Atención en curso desde las ${s.created_at ? new Date(s.created_at).toLocaleTimeString('es-CO',{timeStyle:'short'}) : '—'}. Al terminar, se registra la hora de fin y la duración se calcula sola.</div>` : ''}
+      ${plantillas.length ? `<div class="quick-row"><label for="quick-select">Respuesta rápida:</label><select id="quick-select"><option value="">Elegir una respuesta…</option>${opcionesRR}</select></div><div class="quick-hint">Se escribe en la caja para que la revises y la ajustes antes de guardar.</div>` : ''}
+      <label for="reply-text" class="sr-only">${esPresencialEnCurso ? '¿Qué se atendió / qué se le resolvió?' : 'Respuesta para el ciudadano'}</label>
+      <textarea id="reply-text" maxlength="5000" placeholder="${esPresencialEnCurso ? '¿Qué se atendió / qué se le resolvió?' : 'Escribe la respuesta para el ciudadano...'}"></textarea>
+      <div class="attach-row">
+        <label for="reply-file">📎 Adjuntar archivo (PDF, Word, Excel o imagen, máx. 5 MB):</label>
+        <input type="file" id="reply-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+        <span class="sel-name" id="reply-file-name"></span>
+      </div>
+      <div class="reply-row">
+        <label for="estado-select" class="sr-only">Estado de la solicitud</label>
+        <select id="estado-select">
+          <option value="pendiente"${estadoInicial==='pendiente'?' selected':''}>Pendiente</option>
+          <option value="en_proceso"${estadoInicial==='en_proceso'?' selected':''}>En proceso</option>
+          <option value="resuelto"${estadoInicial==='resuelto'?' selected':''}>Resuelto (cierra la solicitud)</option>
+        </select>
+        <button class="btn-save" id="btn-save">${esPresencialEnCurso ? 'Terminar atención' : 'Guardar'}</button>
+        <span class="save-msg" id="save-msg" role="status" aria-live="polite"></span>
+      </div>
+    </div>`;
+
   wrap.innerHTML = `
     <button class="btn-back" id="btn-back">← Volver a la lista</button>
     <h2>${escapeHtml(s.nombre || 'Sin nombre')} <span class="tag tag-${s.estado}">${labelEstado(s.estado)}</span>${s.prioritaria?' <span class="tag tag-prioritaria">Prioritaria</span>':''}${s._turno ? ` <span class="tag tag-canal">Turno ${s._turno} de ${s._totalEnEspera}</span>` : ''}</h2>
@@ -1080,43 +1314,68 @@ function renderDetail(){
       <div><span>Tipo de trámite</span>${escapeHtml(s.tipo || '—')}</div>
       <div><span>Canal</span>${s.canal === 'presencial' ? 'Atención presencial' : 'Chatbot'}</div>
       <div><span>Atendido por</span>${escapeHtml(s.atendido_por || '—')}</div>
+      ${s.radicado_legible ? `<div><span>Radicado</span>${escapeHtml(s.radicado_legible)}</div>` : ''}
       ${s.canal === 'presencial' && s.created_at ? `<div><span>Hora de inicio</span>${new Date(s.created_at).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'})}</div>` : ''}
       ${s.canal === 'presencial' && s.finalizado_en ? `<div><span>Hora de fin</span>${new Date(s.finalizado_en).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'})}</div>` : ''}
       ${s.canal === 'presencial' && s.duracion_minutos != null ? `<div><span>Duración</span>${s.duracion_minutos} min</div>` : ''}
     </div>
     ${Array.isArray(s.caracterizacion) && s.caracterizacion.length ? `<div style="margin:-10px 0 18px;">${s.caracterizacion.map(c => `<span class="tag tag-caract">${escapeHtml(c)}</span>`).join(' ')}</div>` : ''}
     <div class="thread" id="thread">
-      ${hist.map(m => `<div class="msg from-${m.de}">
+      ${hist.map(m => `<div class="msg from-${m.de === 'ciudadano' ? 'ciudadano' : 'funcionario'}">
         <div class="who">${m.de === 'ciudadano' ? 'Ciudadano' : 'Funcionario'} · ${m.ts ? new Date(m.ts).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}) : ''}</div>
         <div>${escapeHtml(m.texto || '')}</div>
-        ${m.archivo && m.archivo.url ? `<a class="attachment" href="${escapeHtml(m.archivo.url)}" target="_blank" rel="noopener" download>📄 ${escapeHtml(m.archivo.nombre || 'Documento')}</a>` : ''}
+        ${m.archivo && m.archivo.url ? (urlSegura(m.archivo.url)
+            ? `<a class="attachment" href="${escapeHtml(m.archivo.url)}" target="_blank" rel="noopener noreferrer">📄 ${escapeHtml(m.archivo.nombre || 'Documento')}</a>`
+            : `<span class="attachment" title="Este enlace no pertenece al almacenamiento de la Alcaldía y no se abre">⚠️ Adjunto con enlace no válido (no se abre)</span>`) : ''}
       </div>`).join('') || '<div class="msg">Sin mensajes.</div>'}
     </div>
-    <div class="reply-box">
-      ${esPresencialEnCurso ? `<div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;">⏱️ Atención en curso desde las ${s.created_at ? new Date(s.created_at).toLocaleTimeString('es-CO',{timeStyle:'short'}) : '—'}. Al terminar, se registra la hora de fin y la duración se calcula sola.</div>` : ''}
-      <label for="reply-text" class="sr-only">${esPresencialEnCurso ? '¿Qué se atendió / qué se le resolvió?' : 'Respuesta para el ciudadano'}</label>
-      <textarea id="reply-text" placeholder="${esPresencialEnCurso ? '¿Qué se atendió / qué se le resolvió?' : 'Escribe la respuesta para el ciudadano...'}"></textarea>
-      <div class="attach-row">
-        <label for="reply-file">📎 Adjuntar archivo (PDF, Word, Excel o imagen, máx. 5 MB):</label>
-        <input type="file" id="reply-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
-        <span class="sel-name" id="reply-file-name"></span>
-      </div>
-      <div class="reply-row">
-        <select id="estado-select">
-          <option value="pendiente"${s.estado==='pendiente'?' selected':''}>Pendiente</option>
-          <option value="en_proceso"${s.estado==='en_proceso'?' selected':''}>En proceso</option>
-          <option value="resuelto"${s.estado==='resuelto'||esPresencialEnCurso?' selected':''}>Resuelto</option>
-        </select>
-        <button class="btn-save" id="btn-save">${esPresencialEnCurso ? 'Terminar atención' : 'Guardar'}</button>
-        <span class="save-msg" id="save-msg" role="status" aria-live="polite"></span>
-      </div>
-    </div>
+    ${bloqueInferior}
   `;
-  document.getElementById('reply-file').addEventListener('change', (e)=>{
+
+  const inputFile = document.getElementById('reply-file');
+  if(inputFile) inputFile.addEventListener('change', (e)=>{
     const f = e.target.files[0];
     document.getElementById('reply-file-name').textContent = f ? f.name : '';
   });
-  document.getElementById('btn-save').addEventListener('click', ()=> guardarRespuesta(s));
+  const btnSave = document.getElementById('btn-save');
+  if(btnSave) btnSave.addEventListener('click', ()=> guardarRespuesta(s));
+
+  const quick = document.getElementById('quick-select');
+  if(quick) quick.addEventListener('change', ()=>{
+    const p = plantillas[Number(quick.value)];
+    quick.value = '';
+    if(!p) return;
+    const ta = document.getElementById('reply-text');
+    const nuevo = armarRespuestaRapida(p, s);
+    ta.value = ta.value.trim() ? ta.value.trim() + '\n\n' + nuevo : nuevo;
+    ta.focus();
+    const i = ta.value.indexOf('[COMPLETAR');
+    if(i >= 0) ta.setSelectionRange(i, ta.value.indexOf(']', i) + 1);
+  });
+
+  const btnReabrir = document.getElementById('btn-reabrir');
+  if(btnReabrir) btnReabrir.addEventListener('click', async ()=>{
+    const msg = document.getElementById('save-msg');
+    if(!btnReabrir.classList.contains('confirm')){
+      btnReabrir.classList.add('confirm');
+      btnReabrir.textContent = 'Confirmar: reabrir esta solicitud';
+      setTimeout(()=>{ if(btnReabrir.isConnected){ btnReabrir.classList.remove('confirm'); btnReabrir.textContent = 'Reabrir solicitud'; } }, 6000);
+      return;
+    }
+    btnReabrir.disabled = true;
+    const { error } = await sb.rpc('reabrir_solicitud', { p_id: s.id });
+    if(error){
+      console.error(error);
+      btnReabrir.disabled = false;
+      msg.textContent = mensajeError(error);
+      msg.style.color = 'var(--red-700)';
+      return;
+    }
+    await loadSolicitudes();
+    renderDetail();
+    mostrarToast('Solicitud reabierta: quedó "En proceso".');
+  });
+
   const backBtn = document.getElementById('btn-back');
   if(backBtn) backBtn.addEventListener('click', ()=>{
     document.getElementById('staff-shell').classList.remove('showing-detail');
@@ -1134,7 +1393,7 @@ async function subirPdfFuncionario(file, solicitudId){
   const ext = (file.name.split('.').pop() || '').toLowerCase();
   if(!EXTS_ADJUNTO_PERMITIDOS.includes(ext) && !TIPOS_ADJUNTO_PERMITIDOS.includes(file.type)) throw new Error('TIPO');
   if(file.size > MAX_PDF_BYTES) throw new Error('TAMANO');
-  const path = `${solicitudId}/${Date.now()}-${file.name}`.replace(/\s+/g,'_');
+  const path = `${solicitudId}/${Date.now()}-${nombreArchivoSeguro(file.name)}`;
   const { error } = await sb.storage.from('adjuntos').upload(path, file, { contentType: file.type || undefined });
   if(error){ console.error(error); throw new Error('SUBIDA'); }
   const { data } = sb.storage.from('adjuntos').getPublicUrl(path);
@@ -1149,7 +1408,7 @@ async function subirDocumentoActividad(file, funcionarioId){
   const ext = (file.name.split('.').pop() || '').toLowerCase();
   const extsOk = ['pdf','doc','docx','xls','xlsx','jpg','jpeg','png'];
   if(!extsOk.includes(ext) && !TIPOS_DOC_PERMITIDOS.includes(file.type)) throw new Error('TIPO');
-  const path = `${funcionarioId}/${Date.now()}-${file.name}`.replace(/\s+/g,'_');
+  const path = `${funcionarioId}/${Date.now()}-${nombreArchivoSeguro(file.name)}`;
   const { error } = await sb.storage.from('actividades-docs').upload(path, file, { contentType: file.type || undefined });
   if(error){ console.error(error); throw new Error('SUBIDA'); }
   const { data } = sb.storage.from('actividades-docs').getPublicUrl(path);
@@ -1158,7 +1417,7 @@ async function subirDocumentoActividad(file, funcionarioId){
 
 async function guardarRespuesta(s){
   const esPresencialEnCurso = s.canal === 'presencial' && s.estado === 'en_curso';
-  const textoOriginal = document.getElementById('reply-text').value.trim();
+  const texto = document.getElementById('reply-text').value.trim();
   const nuevoEstado = document.getElementById('estado-select').value;
   const fileInput = document.getElementById('reply-file');
   const file = fileInput.files[0];
@@ -1166,8 +1425,13 @@ async function guardarRespuesta(s){
   const btn = document.getElementById('btn-save');
   const btnTextoNormal = esPresencialEnCurso ? 'Terminar atención' : 'Guardar';
 
-  if(!textoOriginal && !file){
+  if(!texto && !file){
     saveMsg.textContent = esPresencialEnCurso ? 'Describe qué se atendió o adjunta un documento.' : 'Escribe una respuesta o adjunta un documento.';
+    saveMsg.style.color = 'var(--red-700)';
+    return;
+  }
+  if(/\[COMPLETAR/i.test(texto)){
+    saveMsg.textContent = 'Completa lo que está entre corchetes [COMPLETAR…] antes de guardar.';
     saveMsg.style.color = 'var(--red-700)';
     return;
   }
@@ -1191,39 +1455,48 @@ async function guardarRespuesta(s){
     }
   }
 
-  const texto = esPresencialEnCurso && !textoOriginal ? 'Atención finalizada.' : textoOriginal;
-  const hist = Array.isArray(s.historial) ? [...s.historial] : [];
-  const entrada = { de:'funcionario', texto, ts: new Date().toISOString(), por: perfil.nombre || '' };
-  if(archivo) entrada.archivo = archivo;
-  if(texto || archivo) hist.push(entrada);
-
-  const payload = {
-    estado: nuevoEstado,
-    historial: hist,
-    atendido_por: perfil.nombre || s.atendido_por || null
-  };
-  if(esPresencialEnCurso){
-    const ahora = new Date();
-    const inicio = s.created_at ? new Date(s.created_at) : null;
-    payload.finalizado_en = ahora.toISOString();
-    payload.duracion_minutos = inicio ? Math.max(1, Math.round((ahora - inicio) / 60000)) : null;
-    if(!textoOriginal) payload.descripcion = texto;
-  }
-
-  const { error } = await sb.from('solicitudes').update(payload).eq('id', s.id);
+  // El servidor agrega la respuesta al historial, pone el nombre del funcionario desde su sesión
+  // y rechaza la respuesta si la solicitud ya fue resuelta (por este u otro funcionario).
+  const { error } = await sb.rpc('responder_solicitud', {
+    p_id: s.id,
+    p_texto: texto || null,
+    p_archivo_url: archivo ? archivo.url : null,
+    p_archivo_nombre: archivo ? archivo.nombre : null,
+    p_estado: nuevoEstado
+  });
   btn.disabled = false; btn.textContent = btnTextoNormal;
   if(error){
     console.error(error);
-    saveMsg.textContent = 'Error al guardar.';
+    const m = String(error.message || '');
+    if(m.includes('YA_RESUELTA') || m.includes('NO_ENCONTRADA')){
+      await loadSolicitudes();
+      renderDetail();
+      const nuevo = document.getElementById('save-msg');
+      if(nuevo){ nuevo.textContent = mensajeError(error); nuevo.style.color = 'var(--red-700)'; }
+      return;
+    }
+    saveMsg.textContent = mensajeError(error);
     saveMsg.style.color = 'var(--red-700)';
     return;
   }
-  saveMsg.textContent = esPresencialEnCurso ? 'Atención terminada ✓' : 'Guardado ✓';
+
+  if(nuevoEstado === 'resuelto'){
+    // Resuelta: se cierra el detalle y se vuelve a la lista, para no responderla dos veces.
+    selectedId = null;
+    document.getElementById('staff-shell').classList.remove('showing-detail');
+    await loadSolicitudes();
+    renderDetail();
+    mostrarToast(`${esPresencialEnCurso ? 'Atención terminada' : 'Solicitud resuelta'}: ${s.nombre || 'ciudadano(a)'} ✓`);
+    return;
+  }
+  saveMsg.textContent = 'Guardado ✓';
   saveMsg.style.color = 'var(--green-700)';
   document.getElementById('reply-text').value = '';
   fileInput.value = '';
   await loadSolicitudes();
   renderDetail();
+  const ok = document.getElementById('save-msg');
+  if(ok){ ok.textContent = 'Guardado ✓'; ok.style.color = 'var(--green-700)'; }
 }
 
 function escapeHtml(str){
@@ -1434,7 +1707,7 @@ async function cargarListaImagenesPanel(){
         <input type="range" class="dest-img-zoom" min="40" max="250" value="${img.zoom}" style="width:100%;">
       </div>
       <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn-small dest-img-guardar" style="background:var(--ochre-600);color:#fff;">Guardar posición y tamaño</button>
+        <button class="btn-small dest-img-guardar" style="background:var(--green-700);color:#fff;">Guardar posición y tamaño</button>
         ${i > 0 ? `<button class="btn-small dest-img-subir-orden" style="background:var(--paper-dim);">↑ Antes</button>` : ''}
         ${i < destImagenesActual.length - 1 ? `<button class="btn-small dest-img-bajar-orden" style="background:var(--paper-dim);">↓ Después</button>` : ''}
         <button class="btn-small dest-img-eliminar" style="background:var(--red-700);color:#fff;">Eliminar</button>
@@ -1883,7 +2156,7 @@ function renderListaDocumentos(){
         <div style="font-weight:600;font-size:13px;">${escapeHtml(a.tipo)} · ${escapeHtml((a.perfiles_funcionario && a.perfiles_funcionario.nombre) || 'Sin nombre')}</div>
         <div style="font-size:12px;color:var(--ink-soft);">${escapeHtml(a.fecha)}${a.descripcion ? ' · ' + escapeHtml(a.descripcion) : ''}</div>
       </div>
-      <a class="btn-small" style="background:var(--green-700);color:#fff;text-decoration:none;" href="${a.archivo_url}" target="_blank" rel="noopener">📎 Abrir</a>
+      <a class="btn-small" style="background:var(--green-700);color:#fff;text-decoration:none;" href="${escapeHtml(urlSegura(a.archivo_url) || '#')}" target="_blank" rel="noopener noreferrer">📎 Abrir</a>
     </div>
   `).join('');
 }
@@ -1940,7 +2213,7 @@ function renderActividadesLista(){
         <div>
           <div style="font-weight:600;font-size:13px;">${escapeHtml(a.tipo)}${a.cantidad > 1 ? ' (x' + a.cantidad + ')' : ''} ${enCurso ? '<span class="tag tag-en_curso">En curso</span>' : ''}</div>
           <div style="font-size:12px;color:var(--ink-soft);">${escapeHtml(a.fecha)}${enCurso ? ' · iniciada ' + horaInicio : (a.tiempo_minutos ? ' · ' + a.tiempo_minutos + ' min' : '')}${a.descripcion ? ' · ' + escapeHtml(a.descripcion) : ''}</div>
-          ${a.archivo_url ? `<div style="font-size:12px;margin-top:3px;"><a href="${a.archivo_url}" target="_blank" rel="noopener">📎 ${escapeHtml(a.archivo_nombre || 'Documento')}</a></div>` : ''}
+          ${a.archivo_url ? `<div style="font-size:12px;margin-top:3px;"><a href="${escapeHtml(urlSegura(a.archivo_url) || '#')}" target="_blank" rel="noopener noreferrer">📎 ${escapeHtml(a.archivo_nombre || 'Documento')}</a></div>` : ''}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;">
           ${enCurso ? `<button class="btn-small" onclick="toggleTerminarActividad('${a.id}')">${abierto ? 'Cancelar' : 'Terminar'}</button>` : ''}
@@ -2133,9 +2406,9 @@ async function exportarExcel(){
   btn.textContent = 'Generando…';
   try{
     const [solRes, actRes, encRes, perfRes] = await Promise.all([
-      sb.from('solicitudes').select('*').order('created_at', { ascending: true }),
-      sb.from('actividades_administrativas').select('*').order('fecha', { ascending: true }),
-      sb.from('encuestas_satisfaccion').select('*').order('created_at', { ascending: true }),
+      traerTodo('solicitudes', 'created_at'),
+      traerTodo('actividades_administrativas', 'fecha'),
+      traerTodo('encuestas_satisfaccion', 'created_at'),
       sb.from('perfiles_funcionario').select('id, nombre'),
     ]);
     // Si alguna consulta falla (por ejemplo por permisos), antes quedaba en
@@ -2507,6 +2780,24 @@ async function guardarPresencial(){
   cerrarModalPresencial();
   await loadSolicitudes();
 }
+
+/* ---------- Buscador de la lista y menú de acciones (celular) ---------- */
+(function(){
+  const inp = document.getElementById('buscar-sol');
+  if(inp) inp.addEventListener('input', () => {
+    terminoBusqueda = quitarTildes(inp.value.trim());
+    renderList();
+  });
+  const tb = document.getElementById('topbar');
+  const btn = document.getElementById('btn-menu');
+  const acciones = document.getElementById('topbar-actions');
+  function cerrarMenu(){ tb.classList.remove('menu-open'); btn.setAttribute('aria-expanded','false'); }
+  if(btn) btn.addEventListener('click', () => {
+    const abierto = tb.classList.toggle('menu-open');
+    btn.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+  });
+  if(acciones) acciones.addEventListener('click', (e) => { if(e.target.closest('button,a')) cerrarMenu(); });
+})();
 </script>
 </body>
 </html>

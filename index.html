@@ -1538,7 +1538,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-21-2';
+const APP_VERSION = '2026-10-23-1';
 let avisoVersionMostrado = false;
 
 /* ============================================================
@@ -1580,12 +1580,16 @@ function formatoRadicado(id){
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function resolverRadicado(textoIngresado){
+async function resolverRadicado(textoIngresado, ultimos4){
   const texto = textoIngresado.trim();
   if(UUID_RE.test(texto)) return texto; // pegó el id completo (compatibilidad)
-  if(texto.length < 4) return null;
-  const { data, error } = await sb.rpc('buscar_radicado_por_codigo', { codigo: texto });
-  if(error){ console.error(error); return null; }
+  if(texto.length < 6) return null;
+  const { data, error } = await sb.rpc('buscar_radicado_por_codigo', { codigo: texto, doc4: String(ultimos4 || '').replace(/\D/g, '') });
+  if(error){
+    console.error(error);
+    if(String(error.message || '').includes('DEMASIADOS_INTENTOS')) return 'LIMITE';
+    return null;
+  }
   return data || null;
 }
 
@@ -1627,6 +1631,13 @@ const MAX_PDF_BYTES = 5 * 1024 * 1024;
 const TIPOS_ADJUNTO_PERMITIDOS = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','image/jpeg','image/png'];
 const EXTS_ADJUNTO_PERMITIDOS = ['pdf','doc','docx','xls','xlsx','jpg','jpeg','png'];
 
+function nombreArchivoSeguro(nombre){
+  const partes = String(nombre || 'archivo').split('.');
+  const ext = partes.length > 1 ? partes.pop().toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+  const base = partes.join('.').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'archivo';
+  return base + (ext ? '.' + ext : '');
+}
+
 async function subirPdf(file, carpeta){
   const ext = (file.name.split('.').pop() || '').toLowerCase();
   if(!EXTS_ADJUNTO_PERMITIDOS.includes(ext) && !TIPOS_ADJUNTO_PERMITIDOS.includes(file.type)){
@@ -1635,7 +1646,7 @@ async function subirPdf(file, carpeta){
   if(file.size > MAX_PDF_BYTES){
     throw new Error('TAMANO');
   }
-  const path = `${carpeta}/${Date.now()}-${file.name}`.replace(/\s+/g,'_');
+  const path = `${carpeta}/${Date.now()}-${nombreArchivoSeguro(file.name)}`;
   const { error } = await sb.storage.from('adjuntos').upload(path, file, { contentType: file.type || undefined });
   if(error){ console.error(error); throw new Error('SUBIDA'); }
   const { data } = sb.storage.from('adjuntos').getPublicUrl(path);
@@ -1902,12 +1913,12 @@ function addMsg(text, who, archivo, radicadoDestacado){
   textWrap.textContent = text;
   if(radicadoDestacado) textWrap.style.marginTop = '4px';
   div.appendChild(textWrap);
-  if(archivo && archivo.url){
+  if(archivo && archivo.url && String(archivo.url).startsWith(SUPABASE_URL + '/storage/v1/object/public/')){
     const a = document.createElement('a');
     a.className = 'attachment';
     a.href = archivo.url;
     a.target = '_blank';
-    a.rel = 'noopener';
+    a.rel = 'noopener noreferrer';
     a.textContent = '📄 ' + (archivo.nombre || 'Descargar documento');
     a.setAttribute('download', archivo.nombre || '');
     a.setAttribute('aria-label', 'Descargar documento adjunto: ' + (archivo.nombre || ''));
@@ -1966,6 +1977,8 @@ function showTextInput(placeholder, multiline){
   scrollChatToBottom();
 }
 function hideTextInput(){
+  const _inp = document.getElementById('chat-text');
+  if(_inp){ _inp.inputMode = 'text'; _inp.removeAttribute('maxlength'); }
   document.getElementById('chat-input-row').style.display = 'none';
   scrollChatToBottom();
 }
@@ -2329,16 +2342,32 @@ async function priorizarUltima(){
 function goConsultar(){
   chatState = 'CONSULTAR_RADICADO';
   setChips([]);
-  addMsg('Indícame el número de radicado que te dieron al registrar tu solicitud (por ejemplo 26-AM-0001).', 'bot');
+  addMsg('Indícame el número de radicado que te dieron al registrar tu solicitud (por ejemplo 26-AM-0001). Después te pediré los últimos 4 números de tu documento, para proteger tus datos.', 'bot');
   showTextInput('Ej: 26-AM-0001');
 }
 
-async function mostrarEstado(textoIngresado){
+let consultaCodigoPendiente = '';
+function pedirUltimos4(){
+  chatState = 'CONSULTAR_DOC4';
+  addMsg('Ahora escribe los últimos 4 números de tu documento de identidad.', 'bot');
+  showTextInput('Ej: 2340');
+  const inp = document.getElementById('chat-text');
+  inp.inputMode = 'numeric';
+  inp.maxLength = 4;
+}
+
+async function mostrarEstado(textoIngresado, ultimos4){
   addMsg('Buscando tu solicitud…', 'system');
-  const radicado = await resolverRadicado(textoIngresado);
+  const radicado = await resolverRadicado(textoIngresado, ultimos4);
+  if(radicado === 'LIMITE'){
+    addMsg('Hiciste varios intentos que no coincidieron. Por seguridad, espera unos 10 minutos antes de intentarlo de nuevo.', 'bot');
+    setChips([{label:'Volver al menú', value:'MENU'}]);
+    chatState = 'CONSULTAR_RETRY';
+    return;
+  }
   const s = radicado ? await getSolicitud(radicado) : null;
   if(!s){
-    addMsg('No encontré ninguna solicitud con ese número de radicado. Verifica que esté completo, como te lo mostramos al radicar (por ejemplo 26-AM-0001).', 'bot');
+    addMsg('No encontré ninguna solicitud con esos datos. Verifica que el radicado esté completo, como te lo mostramos al radicar (por ejemplo 26-AM-0001), y que sean los últimos 4 números del documento con el que radicaste.', 'bot');
     setChips([{label:'Intentar de nuevo', value:'CONSULTAR_RETRY'},{label:'Volver al menú', value:'MENU'}]);
     chatState = 'CONSULTAR_RETRY';
     return;
@@ -2409,7 +2438,17 @@ function handleTextStep(val){
     return;
   }
   if(chatState==='RADICAR_DESCRIPCION'){ draft.descripcion = val; return goRadicarAdjunto(); }
-  if(chatState==='CONSULTAR_RADICADO' || chatState==='CONSULTAR_RETRY'){ hideTextInput(); return mostrarEstado(val); }
+  if(chatState==='CONSULTAR_RADICADO' || chatState==='CONSULTAR_RETRY'){
+    hideTextInput();
+    if(UUID_RE.test(val.trim())) return mostrarEstado(val, '');
+    consultaCodigoPendiente = val;
+    return pedirUltimos4();
+  }
+  if(chatState==='CONSULTAR_DOC4'){
+    hideTextInput();
+    const cod = consultaCodigoPendiente; consultaCodigoPendiente = '';
+    return mostrarEstado(cod, val);
+  }
   if(chatState==='ENCUESTA_COMENTARIO'){ return finalizarEncuesta(val); }
 }
 
