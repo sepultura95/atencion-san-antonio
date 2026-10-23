@@ -185,6 +185,7 @@
   .act{display:flex;align-items:center;gap:16px;text-align:left;font:inherit;cursor:pointer;background:var(--white);color:var(--green-900);border:2px solid transparent;border-radius:22px;padding:22px;box-shadow:0 14px 34px rgba(15,37,56,.16);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;}
   .act:hover,.act:focus-visible{transform:translateY(-4px);box-shadow:0 20px 40px rgba(15,37,56,.22);border-color:var(--ochre-500);}
   .act:active{transform:translateY(-1px);}
+  .act:focus-visible,.prog:focus-visible,.red:focus-visible,.faq-item summary:focus-visible{outline:3px solid var(--green-900);outline-offset:3px;}
   .act .ai{width:60px;height:60px;border-radius:18px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--paper-dim);color:var(--green-700);}
   .act b{display:block;font-family:'Outfit',sans-serif;font-size:21px;line-height:1.15;}
   .act span.t{display:block;font-size:15px;color:var(--ink-soft);margin-top:4px;}
@@ -195,7 +196,7 @@
   /* ---- Secciones ---- */
   .seccion{padding:76px 0 0;}
   .seccion h2{font-size:clamp(30px,4vw,44px);line-height:1.05;font-weight:800;margin:0 0 8px;}
-  .seccion h2 em{font-style:italic;font-weight:600;color:var(--ochre-600);}
+  .seccion h2 em{font-style:italic;font-weight:600;color:#946800;}
   .seccion p.sub{margin:0 0 24px;font-size:18px;color:var(--ink-soft);max-width:620px;}
 
   /* ---- Programas ---- */
@@ -1606,7 +1607,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-23-9';
+const APP_VERSION = '2026-10-23-10';
 let avisoVersionMostrado = false;
 
 /* ============================================================
