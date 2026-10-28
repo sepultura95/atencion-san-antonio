@@ -742,7 +742,7 @@ async function inicializarApariencia(){
       const seal = document.getElementById('seal');
       const px = data.logo_pos_x ?? 50, py = data.logo_pos_y ?? 50;
       const lz = (data.logo_zoom ?? 100) / 100;
-      seal.innerHTML = `<img src="${data.logo_url}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima" style="object-position:${px}% ${py}%;transform:scale(${lz});">`;
+      seal.innerHTML = `<img src="${escapeHtml(urlHttps(data.logo_url))}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima" style="object-position:${px}% ${py}%;transform:scale(${lz});">`;
     }
     if(data.header_fondo_url){
       const bgImg = document.getElementById('topbar-bg-img');
@@ -764,7 +764,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-23-12';
+const APP_VERSION = '2026-10-24-1';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -907,9 +907,9 @@ document.getElementById('btn-np-guardar').addEventListener('click', async ()=>{
   const p2 = document.getElementById('np-pass2').value;
   const msg = document.getElementById('np-msg');
   const btn = document.getElementById('btn-np-guardar');
-  if(p1.length < 6){
+  if(p1.length < 10){
     msg.style.color = 'var(--red-700)';
-    msg.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+    msg.textContent = 'La contraseña debe tener al menos 10 caracteres.';
     return;
   }
   if(p1 !== p2){
@@ -1537,6 +1537,8 @@ async function guardarRespuesta(s){
 function escapeHtml(str){
   return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+// Solo se aceptan enlaces https:// para imágenes y videos que vienen de la configuración del sitio
+function urlHttps(u){ return (typeof u === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(u)) ? u : ''; }
 
 /* ============================================================
    Apariencia del encabezado — solo coordinador
@@ -1770,7 +1772,7 @@ async function cargarListaImagenesPanel(){
     <div style="border:1px solid var(--line);border-radius:8px;padding:10px;" data-img-id="${img.id}">
       <div style="display:flex;gap:10px;">
         <div class="dest-img-preview-wrap" style="width:72px;height:54px;border-radius:4px;overflow:hidden;flex:none;background:var(--paper-dim);">
-          <img class="dest-img-preview" src="${img.url}" style="width:100%;height:100%;object-fit:contain;object-position:${img.pos_x}% ${img.pos_y}%;transform:scale(${img.zoom/100});">
+          <img class="dest-img-preview" src="${escapeHtml(urlHttps(img.url))}" style="width:100%;height:100%;object-fit:contain;object-position:${img.pos_x}% ${img.pos_y}%;transform:scale(${img.zoom/100});">
         </div>
         <div style="flex:1;min-width:0;">
           <input type="text" class="dest-img-titulo" placeholder="Título (opcional)" value="${escapeHtml(img.titulo || '')}" style="width:100%;padding:6px;border:1px solid var(--line);border-radius:5px;font-size:12.5px;margin-bottom:4px;">

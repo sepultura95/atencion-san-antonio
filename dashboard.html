@@ -256,6 +256,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+/* Escapa texto antes de ponerlo dentro de HTML (nombres, tipos y etiquetas que vienen de la base de datos) */
+const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const urlHttps = (u) => (typeof u === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(u)) ? u : '';
 const SUPABASE_URL = 'https://yjkibftpjvhedbmscbwo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_elPZQ7xh3ManlHtDWJY1DA_1TgwZvgk';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -286,7 +289,7 @@ async function inicializarApariencia(){
       const seal = document.getElementById('seal');
       const px = data.logo_pos_x ?? 50, py = data.logo_pos_y ?? 50;
       const lz = (data.logo_zoom ?? 100) / 100;
-      seal.innerHTML = `<img src="${data.logo_url}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima" style="object-position:${px}% ${py}%;transform:scale(${lz});">`;
+      seal.innerHTML = `<img src="${esc(urlHttps(data.logo_url))}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima" style="object-position:${px}% ${py}%;transform:scale(${lz});">`;
     }
     if(data.header_fondo_url){
       const bgImg = document.getElementById('topbar-bg-img');
@@ -592,7 +595,7 @@ function donutMultiSVG(segmentos, size=160, grosor=22){
     acumulado += seg.valor;
     return `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${seg.color}" stroke-width="${grosor}"
       stroke-linecap="round" stroke-dasharray="${largo.toFixed(1)} ${(circ-largo).toFixed(1)}"
-      transform="rotate(${rot.toFixed(1)} ${c} ${c})"><title>${seg.etiqueta}: ${seg.valor}</title></circle>`;
+      transform="rotate(${rot.toFixed(1)} ${c} ${c})"><title>${esc(seg.etiqueta)}: ${seg.valor}</title></circle>`;
   }).join('');
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${circles}</svg>`;
 }
@@ -611,8 +614,8 @@ function lineaAreaSVG(valores, labels, { width=520, height=170 } = {}){
   const pts = valores.map((v,i) => ({ x: padL + i*stepX, y: padT + h - (v/max)*h }));
   const line = pts.map((p,i) => (i===0?'M':'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
   const area = line + ` L${pts[pts.length-1].x.toFixed(1)},${(padT+h).toFixed(1)} L${pts[0].x.toFixed(1)},${(padT+h).toFixed(1)} Z`;
-  const puntos = pts.map((p,i) => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="var(--accent)" stroke="var(--bg-card)" stroke-width="2"><title>${labels[i]}: ${valores[i]} solicitud${valores[i]===1?'':'es'}</title></circle>`).join('');
-  const etiquetasEje = labels.map((l,i) => `<text x="${pts[i].x.toFixed(1)}" y="${height-6}" font-size="10" fill="var(--text-muted)" text-anchor="middle">${l}</text>`).join('');
+  const puntos = pts.map((p,i) => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="var(--accent)" stroke="var(--bg-card)" stroke-width="2"><title>${esc(labels[i])}: ${valores[i]} solicitud${valores[i]===1?'':'es'}</title></circle>`).join('');
+  const etiquetasEje = labels.map((l,i) => `<text x="${pts[i].x.toFixed(1)}" y="${height-6}" font-size="10" fill="var(--text-muted)" text-anchor="middle">${esc(l)}</text>`).join('');
   return `<svg viewBox="0 0 ${width} ${height}" class="linea-chart" preserveAspectRatio="none" style="width:100%;height:${height}px;">
     <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.32"/>
@@ -770,7 +773,7 @@ function construirSeccionActividades(actividadesScope){
     const ancho = Math.max(4, Math.round((f.cant / max) * 100));
     return `
       <div class="bar-row">
-        <div class="bar-label">${f.tipo}${i===0 ? '<span class="badge-top">más frecuente</span>' : ''}</div>
+        <div class="bar-label">${esc(f.tipo)}${i===0 ? '<span class="badge-top">más frecuente</span>' : ''}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${ancho}%;background:var(--accent);"></div></div>
         <div class="bar-value">${f.cant}</div>
       </div>`;
@@ -796,7 +799,7 @@ function renderVistaActividades(){
         <label for="sel-func-actividades" style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Filtrar por funcionario</label>
         <select id="sel-func-actividades" style="padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:var(--bg-card-2);color:var(--text-primary);min-width:240px;">
           <option value="todos">Todos</option>
-          ${nombresConActividad.map(n => `<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('')}
+          ${nombresConActividad.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('')}
         </select>
       </div>`;
   }
@@ -845,11 +848,11 @@ function construirListaBarras(filas, { selectorDestino } = {}){
     const nivel = semEficacia(f.eficacia);
     const ancho = f.eficacia !== null ? Math.max(4, Math.round(f.eficacia)) : 4;
     const drill = (selectorDestino && f.valorAmbito)
-      ? `<a class="drill-link" href="#" onclick="irAAmbito('${f.valorAmbito.replace(/'/g,"\\'")}');return false;">Ver detalle</a>`
+      ? `<a class="drill-link" href="#" data-ambito="${esc(f.valorAmbito)}">Ver detalle</a>`
       : '';
     return `
       <div class="bar-row">
-        <div class="bar-label">${f.etiqueta}</div>
+        <div class="bar-label">${esc(f.etiqueta)}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${ancho}%;background:${COLOR_NIVEL[nivel]};"></div></div>
         <div class="bar-value">${f.detalle}${drill}</div>
       </div>`;
@@ -865,17 +868,21 @@ function construirListaProductividad(filas, { selectorDestino } = {}){
   return filas.map(f => {
     const ancho = f.valor > 0 ? Math.max(4, Math.round((f.valor / max) * 100)) : 2;
     const drill = (selectorDestino && f.valorAmbito)
-      ? `<a class="drill-link" href="#" onclick="irAAmbito('${f.valorAmbito.replace(/'/g,"\\'")}');return false;">Ver detalle</a>`
+      ? `<a class="drill-link" href="#" data-ambito="${esc(f.valorAmbito)}">Ver detalle</a>`
       : '';
     return `
       <div class="bar-row">
-        <div class="bar-label">${f.etiqueta}</div>
+        <div class="bar-label">${esc(f.etiqueta)}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${ancho}%;background:var(--accent);"></div></div>
         <div class="bar-value">${f.detalle}${drill}</div>
       </div>`;
   }).join('');
 }
 
+document.addEventListener('click', ev => {
+  const a = ev.target.closest && ev.target.closest('a[data-ambito]');
+  if(a){ ev.preventDefault(); irAAmbito(a.getAttribute('data-ambito')); }
+});
 function irAAmbito(valor){
   const sel = document.getElementById('sel-ambito');
   if([...sel.options].some(o => o.value === valor)){
@@ -913,7 +920,7 @@ function construirSeccionAutoservicio(programasAmbito){
   if(!filas.length){ return h + `<p class="vacio-aviso">Sin datos todavía.</p></div>`; }
   h += `<div class="tabla-wrap"><table class="tabla"><thead><tr><th>Programa</th><th>Responsable(s)</th><th class="num">Atenciones</th><th class="num">Portal / Chat</th></tr></thead><tbody>`;
   filas.forEach(f => {
-    h += `<tr><td data-label="Programa">${f.programa}</td><td data-label="Responsable(s)">${f.resp.length ? f.resp.join(', ') : '—'}</td><td class="num" data-label="Atenciones"><strong>${f.total}</strong></td><td class="num" data-label="Portal / Chat">${f.portal} / ${f.chat}</td></tr>`;
+    h += `<tr><td data-label="Programa">${esc(f.programa)}</td><td data-label="Responsable(s)">${f.resp.length ? f.resp.map(esc).join(', ') : '—'}</td><td class="num" data-label="Atenciones"><strong>${f.total}</strong></td><td class="num" data-label="Portal / Chat">${f.portal} / ${f.chat}</td></tr>`;
   });
   h += `</tbody></table></div></div>`;
   return h;
@@ -942,7 +949,7 @@ function renderDashboard(){
   const bench = (ambito.esIndividual) ? calcularBenchProductividad() : null;
 
   let html = '';
-  html += `<div class="seccion"><h2>${ambito.etiqueta}</h2>`;
+  html += `<div class="seccion"><h2>${esc(ambito.etiqueta)}</h2>`;
   html += `<p class="seccion-sub">Indicadores calculados sobre lo que tienes registrado en este ámbito.</p>`;
   html += construirKPIs(kpis, { conProductividad: !ambito.esPrograma, actividadesScope: ambito.actividadesScope, bench });
   html += `</div>`;

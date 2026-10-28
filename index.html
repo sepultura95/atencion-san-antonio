@@ -1112,7 +1112,7 @@ async function inicializarApariencia(){
     if(data.logo_url){
       const px = data.logo_pos_x ?? 50, py = data.logo_pos_y ?? 50;
       const lz = (data.logo_zoom ?? 100) / 100;
-      seal.innerHTML = `<img src="${data.logo_url}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima" style="object-position:${px}% ${py}%;transform:scale(${lz});">`;
+      seal.innerHTML = `<img src="${escapeHtml(urlHttps(data.logo_url))}" alt="Escudo de la Alcaldía Municipal de San Antonio, Tolima" style="object-position:${px}% ${py}%;transform:scale(${lz});">`;
       seal.removeAttribute('aria-hidden');
     } else if(seal.querySelector('img')){
       seal.innerHTML = 'SA';
@@ -1622,7 +1622,7 @@ function renderHeroImagenSlide(){
   const px = img.pos_x ?? 50, py = img.pos_y ?? 50, z = (img.zoom ?? 100) / 100;
   const tieneTexto = img.titulo || img.texto;
   box.innerHTML = `
-    <div class="hf-media"><img src="${img.url}" alt="${escapeHtml(img.titulo || 'Imagen destacada')}" style="object-position:${px}% ${py}%;transform:scale(${z});"></div>
+    <div class="hf-media"><img src="${escapeHtml(urlHttps(img.url))}" alt="${escapeHtml(img.titulo || 'Imagen destacada')}" style="object-position:${px}% ${py}%;transform:scale(${z});"></div>
     ${tieneTexto ? `<div class="hf-body">
       ${img.titulo ? `<div class="hf-titulo">${escapeHtml(img.titulo)}</div>` : ''}
       ${img.texto ? `<div class="hf-texto">${escapeHtml(img.texto)}</div>` : ''}
@@ -1677,7 +1677,7 @@ async function renderHeroFeature(data){
     const embed = urlVideoEmbed(data.destacado_url);
     media = embed
       ? `<iframe src="${embed}" title="${escapeHtml(data.destacado_titulo || 'Video destacado')}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`
-      : `<video src="${data.destacado_url}" controls></video>`;
+      : `<video src="${escapeHtml(urlHttps(data.destacado_url))}" controls></video>`;
   }
   const tieneTexto = data.destacado_titulo || data.destacado_texto;
   const body = tieneTexto ? `
@@ -1707,7 +1707,7 @@ setInterval(() => {
    y mientras tanto subimos un cambio, le avisamos para que
    actualice (sin recargarla por su cuenta y sin perder su chat).
 ============================================================ */
-const APP_VERSION = '2026-10-23-12';
+const APP_VERSION = '2026-10-24-1';
 let avisoVersionMostrado = false;
 
 /* ============================================================
@@ -1901,7 +1901,7 @@ function renderHeroCarousel(){
   hcIndex = Math.min(hcIndex, hcSlides.length - 1);
   const track = document.getElementById('hc-track');
   track.innerHTML = hcSlides.map(b => `
-    <div class="hc-slide" role="img" aria-label="${escapeHtml(b.titulo || 'Aviso informativo de la Alcaldía')}" style="background-image:url('${escapeHtml(b.url)}')">
+    <div class="hc-slide" role="img" aria-label="${escapeHtml(b.titulo || 'Aviso informativo de la Alcaldía')}" style="background-image:url('${escapeHtml(encodeURI(urlHttps(b.url)).replace(/'/g,'%27'))}')">
       ${b.titulo ? `<div class="hc-caption">${escapeHtml(b.titulo)}</div>` : ''}
     </div>
   `).join('');
@@ -1927,6 +1927,8 @@ function hcGoTo(i){ hcIndex = i; hcUpdate(); }
 function escapeHtml(str){
   return String(str==null?'':str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+// Solo se aceptan enlaces https:// para imágenes y videos que vienen de la configuración del sitio
+function urlHttps(u){ return (typeof u === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(u)) ? u : ''; }
 
 /* ============================================================
    Chatbot — rule-based state machine
