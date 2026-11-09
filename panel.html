@@ -245,6 +245,19 @@
   .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
   .btn-cancel{background:var(--paper);border:1px solid var(--line);color:var(--ink-soft);padding:10px 16px;border-radius:4px;font-size:13.5px;font-weight:600;}
   .modal-msg{font-size:13px;margin-top:10px;min-height:16px;}
+  .enc-preg{border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin-bottom:10px;}
+  .enc-preg legend{font-size:13.5px;font-weight:600;padding:0 4px;line-height:1.4;}
+  .enc-escala{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px;}
+  .enc-escala label{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:8px 4px;cursor:pointer;font-size:11px;color:var(--ink-soft);text-align:center;line-height:1.2;min-height:44px;}
+  .enc-escala label b{font-size:16px;color:var(--ink);}
+  .enc-escala input{position:absolute;opacity:0;width:1px;height:1px;}
+  .enc-escala input:checked + label{background:var(--green-700);border-color:var(--green-700);color:#fff;}
+  .enc-escala input:checked + label b{color:#fff;}
+  .enc-escala input:focus-visible + label{outline:3px solid var(--ochre-500);outline-offset:2px;}
+  .enc-preg.falta{border-color:var(--red-700);}
+  .btn-encuesta{background:var(--white);color:var(--green-700);border:1px solid var(--green-700);padding:10px 14px;border-radius:4px;font-weight:600;font-size:13.5px;cursor:pointer;min-height:42px;}
+  .enc-hecha{font-size:13px;color:var(--green-700);margin-top:10px;}
+  @media (max-width:480px){.enc-escala label span{display:none;}}
   @media (max-width:480px){.modal-row2{grid-template-columns:1fr;}}
 
   @media (prefers-reduced-motion: reduce){
@@ -647,6 +660,33 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-encuesta-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-encuesta-title">
+  <div class="modal-card">
+    <div id="enc-paso-pregunta">
+      <h2 id="modal-encuesta-title">Atención terminada ✓</h2>
+      <p class="modal-sub" id="enc-sub">¿El ciudadano quiere responder la encuesta de satisfacción? Son 5 preguntas rápidas; puedes leérselas o pasarle el equipo.</p>
+      <div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap;">
+        <button class="btn-save" id="btn-enc-si">Sí, hacer la encuesta</button>
+        <button class="btn-cancel" id="btn-enc-no">No, terminar sin encuesta</button>
+      </div>
+    </div>
+    <div id="enc-paso-form" hidden>
+      <h2>Encuesta de satisfacción</h2>
+      <p class="modal-sub" id="enc-form-sub"></p>
+      <div id="enc-preguntas"></div>
+      <div class="field">
+        <label for="enc-comentario">Comentario del ciudadano (opcional)</label>
+        <textarea id="enc-comentario" maxlength="1000"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="btn-enc-cancelar">Cancelar</button>
+        <button class="btn-save" id="btn-enc-guardar">Guardar encuesta</button>
+      </div>
+    </div>
+    <div class="modal-msg" id="enc-msg" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
 <div class="login-wrap" id="login-wrap">
   <div class="login-card">
     <h2>Acceso restringido</h2>
@@ -764,7 +804,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-10-24-1';
+const APP_VERSION = '2026-11-09-1';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -1315,6 +1355,7 @@ function renderDetail(){
       <b>✓ Solicitud resuelta</b>
       Resuelta por ${escapeHtml(s.atendido_por || '—')}${cuandoResuelta ? ' · ' + new Date(cuandoResuelta).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}) : ''}.${vecesReabierta ? ` Reabierta ${vecesReabierta} ${vecesReabierta === 1 ? 'vez' : 'veces'}.` : ''} Ya no admite nuevas respuestas.
       ${puedeReabrir ? `<div class="rb-row"><button class="btn-reabrir" id="btn-reabrir">Reabrir solicitud</button><span class="save-msg" id="save-msg" role="status" aria-live="polite"></span></div>` : ''}
+      ${s.canal === 'presencial' ? '<div id="enc-detalle"></div>' : ''}
     </div>` : `
     <div class="reply-box">
       ${esPresencialEnCurso ? `<div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;">⏱️ Atención en curso desde las ${s.created_at ? new Date(s.created_at).toLocaleTimeString('es-CO',{timeStyle:'short'}) : '—'}. Al terminar, se registra la hora de fin y la duración se calcula sola.</div>` : ''}
@@ -1388,6 +1429,8 @@ function renderDetail(){
     if(i >= 0) ta.setSelectionRange(i, ta.value.indexOf(']', i) + 1);
   });
 
+  if(resuelta && s.canal === 'presencial') pintarEstadoEncuesta(s);
+
   const btnReabrir = document.getElementById('btn-reabrir');
   if(btnReabrir) btnReabrir.addEventListener('click', async ()=>{
     const msg = document.getElementById('save-msg');
@@ -1449,6 +1492,129 @@ async function subirDocumentoActividad(file, funcionarioId){
   const { data } = sb.storage.from('actividades-docs').getPublicUrl(path);
   return { url: data.publicUrl, nombre: file.name };
 }
+
+/* ---------- Encuesta de satisfacción en atención presencial ----------
+   Mismas 5 preguntas SERVQUAL del portal (escala 1-5), redactadas para la atención en oficina.
+   Se guarda en encuestas_satisfaccion igual que la del ciudadano: el canal se sabe por la solicitud. */
+const ENC_PRESENCIAL = [
+  { campo:'tangibles', texto:'¿Qué tan cómodo y ordenado le pareció el lugar donde fue atendido(a)?' },
+  { campo:'fiabilidad', texto:'¿La atención resolvió realmente lo que necesitaba?' },
+  { campo:'capacidad_respuesta', texto:'¿Qué tan rápida le pareció la atención?' },
+  { campo:'seguridad', texto:'¿El funcionario mostró conocimiento y le dio confianza?' },
+  { campo:'empatia', texto:'¿Sintió un trato amable y personalizado?' },
+];
+const ENC_ESCALA = ['Muy insatisfecho','Insatisfecho','Neutral','Satisfecho','Muy satisfecho'];
+let encSolicitud = null;
+let encFocoPrevio = null;
+
+function abrirEncuestaPresencial(s, preguntarPrimero){
+  encSolicitud = s;
+  encFocoPrevio = document.activeElement;
+  document.getElementById('enc-msg').textContent = '';
+  document.getElementById('enc-paso-pregunta').hidden = !preguntarPrimero;
+  document.getElementById('enc-paso-form').hidden = preguntarPrimero;
+  if(!preguntarPrimero) prepararFormEncuesta();
+  document.getElementById('modal-encuesta-overlay').classList.add('open');
+  setTimeout(()=> (document.getElementById(preguntarPrimero ? 'btn-enc-si' : 'btn-enc-cancelar') || {}).focus?.(), 30);
+}
+
+function prepararFormEncuesta(){
+  const s = encSolicitud;
+  document.getElementById('enc-form-sub').textContent =
+    `${s.nombre || 'Ciudadano(a)'}${s.radicado_legible ? ' · ' + s.radicado_legible : ''}. Marque de 1 (muy insatisfecho) a 5 (muy satisfecho).`;
+  document.getElementById('enc-comentario').value = '';
+  document.getElementById('enc-preguntas').innerHTML = ENC_PRESENCIAL.map((p, i) => `
+    <fieldset class="enc-preg" data-campo="${p.campo}">
+      <legend>${i + 1}. ${escapeHtml(p.texto)}</legend>
+      <div class="enc-escala">
+        ${ENC_ESCALA.map((t, j) => `
+          <input type="radio" name="enc-${p.campo}" id="enc-${p.campo}-${j + 1}" value="${j + 1}">
+          <label for="enc-${p.campo}-${j + 1}"><b>${j + 1}</b><span>${t}</span></label>`).join('')}
+      </div>
+    </fieldset>`).join('');
+  const btn = document.getElementById('btn-enc-guardar');
+  btn.disabled = false; btn.textContent = 'Guardar encuesta';
+}
+
+function cerrarEncuestaPresencial(){
+  document.getElementById('modal-encuesta-overlay').classList.remove('open');
+  encSolicitud = null;
+  if(encFocoPrevio && encFocoPrevio.isConnected) encFocoPrevio.focus();
+}
+
+async function guardarEncuestaPresencial(){
+  const msg = document.getElementById('enc-msg');
+  const btn = document.getElementById('btn-enc-guardar');
+  const datos = {};
+  let primeraFalta = null;
+  ENC_PRESENCIAL.forEach(p => {
+    const marcada = document.querySelector(`input[name="enc-${p.campo}"]:checked`);
+    const fs = document.querySelector(`.enc-preg[data-campo="${p.campo}"]`);
+    fs.classList.toggle('falta', !marcada);
+    if(marcada) datos[p.campo] = parseInt(marcada.value, 10);
+    else if(!primeraFalta) primeraFalta = fs;
+  });
+  if(primeraFalta){
+    msg.textContent = 'Falta calificar alguna pregunta (marcada en rojo).';
+    msg.style.color = 'var(--red-700)';
+    primeraFalta.querySelector('input').focus();
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  msg.textContent = '';
+  const s = encSolicitud;
+  const { error } = await conTiempo(sb.from('encuestas_satisfaccion').insert({
+    solicitud_id: s.id,
+    radicado_legible: s.radicado_legible || null,
+    ...datos,
+    comentario: document.getElementById('enc-comentario').value.trim() || null,
+  }), 20000);
+  if(error){
+    btn.disabled = false; btn.textContent = 'Guardar encuesta';
+    console.error(error);
+    msg.textContent = error.code === '23505'
+      ? 'Esta atención ya tiene una encuesta registrada.'
+      : 'No se pudo guardar la encuesta. Revisa la conexión e inténtalo de nuevo.';
+    msg.style.color = 'var(--red-700)';
+    return;
+  }
+  cerrarEncuestaPresencial();
+  mostrarToast(`Encuesta guardada: ${s.nombre || 'ciudadano(a)'} ✓`);
+  if(selectedId === s.id) pintarEstadoEncuesta(s);
+}
+
+// En una atención presencial resuelta: muestra si ya tiene encuesta o el botón para hacerla después.
+async function pintarEstadoEncuesta(s){
+  const cont = document.getElementById('enc-detalle');
+  if(!cont) return;
+  let tiene = false;
+  try{
+    const { data, error } = await sb.rpc('existe_encuesta', { p_solicitud_id: s.id });
+    if(error) throw error;
+    tiene = !!data;
+  }catch(e){ console.error(e); return; }
+  const actual = document.getElementById('enc-detalle');
+  if(!actual || selectedId !== s.id) return;
+  if(tiene){
+    actual.innerHTML = '<div class="enc-hecha">★ Encuesta de satisfacción registrada.</div>';
+  } else {
+    actual.innerHTML = '<div class="rb-row"><button class="btn-encuesta" id="btn-encuesta-detalle">Hacer encuesta de satisfacción</button></div>';
+    document.getElementById('btn-encuesta-detalle').addEventListener('click', ()=> abrirEncuestaPresencial(s, false));
+  }
+}
+
+document.getElementById('btn-enc-si').addEventListener('click', ()=>{
+  document.getElementById('enc-paso-pregunta').hidden = true;
+  document.getElementById('enc-paso-form').hidden = false;
+  prepararFormEncuesta();
+  setTimeout(()=> document.getElementById('enc-tangibles-1')?.focus(), 30);
+});
+document.getElementById('btn-enc-no').addEventListener('click', cerrarEncuestaPresencial);
+document.getElementById('btn-enc-cancelar').addEventListener('click', cerrarEncuestaPresencial);
+document.getElementById('btn-enc-guardar').addEventListener('click', guardarEncuestaPresencial);
+document.getElementById('modal-encuesta-overlay').addEventListener('keydown', e => {
+  if(e.key === 'Escape') cerrarEncuestaPresencial();
+});
 
 async function guardarRespuesta(s){
   const esPresencialEnCurso = s.canal === 'presencial' && s.estado === 'en_curso';
@@ -1522,6 +1688,7 @@ async function guardarRespuesta(s){
     await loadSolicitudes();
     renderDetail();
     mostrarToast(`${esPresencialEnCurso ? 'Atención terminada' : 'Solicitud resuelta'}: ${s.nombre || 'ciudadano(a)'} ✓`);
+    if(esPresencialEnCurso || s.canal === 'presencial') abrirEncuestaPresencial(s, true);
     return;
   }
   saveMsg.textContent = 'Guardado ✓';
