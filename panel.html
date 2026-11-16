@@ -256,6 +256,9 @@
   .enc-escala input:focus-visible + label{outline:3px solid var(--ochre-500);outline-offset:2px;}
   .enc-preg.falta{border-color:var(--red-700);}
   .btn-encuesta{background:var(--white);color:var(--green-700);border:1px solid var(--green-700);padding:10px 14px;border-radius:4px;font-weight:600;font-size:13.5px;cursor:pointer;min-height:42px;}
+  .zona-eliminar{margin-top:28px;padding-top:14px;border-top:1px dashed var(--line);display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .btn-eliminar{background:var(--white);color:var(--red-700);border:1px solid var(--red-700);padding:8px 14px;border-radius:4px;font-weight:600;font-size:13px;cursor:pointer;min-height:40px;}
+  .btn-eliminar.confirm{background:var(--red-700);color:#fff;}
   .enc-hecha{font-size:13px;color:var(--green-700);margin-top:10px;}
   @media (max-width:480px){.enc-escala label span{display:none;}}
   @media (max-width:480px){.modal-row2{grid-template-columns:1fr;}}
@@ -804,7 +807,7 @@ inicializarApariencia();
 /* ============================================================
    Aviso de versión nueva — mismo mecanismo que el portal ciudadano.
 ============================================================ */
-const APP_VERSION = '2026-11-09-1';
+const APP_VERSION = '2026-11-16-1';
 let avisoVersionMostrado = false;
 
 async function verificarVersionNueva(){
@@ -1406,6 +1409,10 @@ function renderDetail(){
       </div>`).join('') || '<div class="msg">Sin mensajes.</div>'}
     </div>
     ${bloqueInferior}
+    ${esCoord ? `<div class="zona-eliminar">
+      <button class="btn-eliminar" id="btn-eliminar">Eliminar solicitud (datos de prueba)</button>
+      <span class="save-msg" id="eliminar-msg" role="status" aria-live="polite"></span>
+    </div>` : ''}
   `;
 
   const inputFile = document.getElementById('reply-file');
@@ -1430,6 +1437,41 @@ function renderDetail(){
   });
 
   if(resuelta && s.canal === 'presencial') pintarEstadoEncuesta(s);
+
+  const btnEliminar = document.getElementById('btn-eliminar');
+  if(btnEliminar) btnEliminar.addEventListener('click', async ()=>{
+    const msg = document.getElementById('eliminar-msg');
+    if(!btnEliminar.classList.contains('confirm')){
+      btnEliminar.classList.add('confirm');
+      btnEliminar.textContent = `Confirmar: borrar definitivamente${s.radicado_legible ? ' ' + s.radicado_legible : ''}`;
+      msg.textContent = 'Se borran la solicitud, su historial y su encuesta. No se puede deshacer.';
+      msg.style.color = 'var(--red-700)';
+      setTimeout(()=>{ if(btnEliminar.isConnected && !btnEliminar.disabled){
+        btnEliminar.classList.remove('confirm'); btnEliminar.textContent = 'Eliminar solicitud (datos de prueba)'; msg.textContent = ''; } }, 8000);
+      return;
+    }
+    btnEliminar.disabled = true; btnEliminar.textContent = 'Eliminando...';
+    const { error } = await conTiempo(sb.rpc('eliminar_solicitud', { p_id: s.id }), 25000);
+    if(error){
+      console.error(error);
+      btnEliminar.disabled = false;
+      btnEliminar.classList.remove('confirm'); btnEliminar.textContent = 'Eliminar solicitud (datos de prueba)';
+      const m = String(error.message || '');
+      msg.textContent = (m.includes('eliminar_solicitud') && (m.includes('does not exist') || m.includes('schema cache') || m.includes('Could not find')))
+        ? 'Falta ejecutar en Supabase el SQL sql_eliminar_solicitud.sql.'
+        : m.includes('SIN_PERMISO') ? 'Solo la coordinación puede eliminar solicitudes.'
+        : m.includes('NO_ENCONTRADA') ? 'La solicitud ya no existe. Se actualizó la lista.'
+        : mensajeError(error);
+      msg.style.color = 'var(--red-700)';
+      if(m.includes('NO_ENCONTRADA')){ selectedId = null; await loadSolicitudes(); renderDetail(); }
+      return;
+    }
+    selectedId = null;
+    document.getElementById('staff-shell').classList.remove('showing-detail');
+    await loadSolicitudes();
+    renderDetail();
+    mostrarToast(`Solicitud eliminada: ${s.nombre || 'sin nombre'}${s.radicado_legible ? ' (' + s.radicado_legible + ')' : ''}`);
+  });
 
   const btnReabrir = document.getElementById('btn-reabrir');
   if(btnReabrir) btnReabrir.addEventListener('click', async ()=>{
